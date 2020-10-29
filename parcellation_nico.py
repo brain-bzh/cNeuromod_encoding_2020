@@ -19,7 +19,6 @@ labels_img = '/home/nfarrugi/git/MIST_parcellation/MIST_parcellation/Parcellatio
 
 
 from nilearn.input_data import NiftiLabelsMasker
-
 import confound_loader
 import os
 import numpy as np
