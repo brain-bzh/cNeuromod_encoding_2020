@@ -2,13 +2,13 @@ import torch, warnings
 import torch.nn as nn
 from nistats import hemodynamic_models
 import numpy as np
-from soundnet_model import SoundNet8_pytorch
+from models import soundnet_model as snd
 
 class SoundNetEncoding(nn.Module):
     def __init__(self,pytorch_param_path,nroi=210,fmrihidden=1000,nroi_attention=None, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0):
         super(SoundNetEncoding, self).__init__()
 
-        self.soundnet = SoundNet8_pytorch()
+        self.soundnet = snd.SoundNet8_pytorch()
         self.fmrihidden = fmrihidden
         self.nroi = nroi
 
@@ -82,7 +82,7 @@ class SoundNetEncoding_conv(nn.Module):
     def __init__(self,pytorch_param_path,nroi=210,fmrihidden=1000,nroi_attention=None, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,transfer=True,preload=True):
         super(SoundNetEncoding_conv, self).__init__()
 
-        self.soundnet = SoundNet8_pytorch()
+        self.soundnet = snd.SoundNet8_pytorch()
         self.fmrihidden = fmrihidden
         self.nroi = nroi
 

@@ -246,3 +246,28 @@ if __name__ == "__main__":
     epoch_loop(net, nbepochs, trainloader, valloader, testloader, mseloss, optimizer)
     
 
+
+
+
+#modified from Nicolas Farrugia
+        #### Check if audio file exists
+if os.path.isfile(self.wavfile) is False:
+
+    #### If not, generate it and put it at the same place than the video file , as a wav, with the same name
+    #### use this following audio file to generate predictions on sound 
+
+    print('wav file does not exist, converting from {videofile}...'.format(videofile=videofile))
+
+    convert_Audio(videofile, self.wavfile)
+
+## Load just 2 seconds to check the sample rate 
+wav,native_sr = librosa.core.load(self.wavfile,duration=2,sr=None, mono=True)
+
+# Resample and save if necessary 
+if int(native_sr)!=int(self.sample_rate):
+    print("Native Sampling rate is {}".format(native_sr))
+
+    print('Resampling to {sr} Hz'.format(sr=self.sample_rate))
+
+    wav,_ = librosa.core.load(self.wavfile, sr=self.sample_rate, mono=True)
+    soundfile.write(self.wavfile,wav,self.sample_rate)

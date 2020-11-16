@@ -142,9 +142,9 @@ enddate = datetime.now()
 net.load_state_dict(torch.load('checkpoint.pt'))
 
 dt_string = enddate.strftime("%Y-%m-%d-%H-%M-%S")
-str_bestmodel = os.path.join(destdir,"{}_{}_{}_{}_{}.pt".format(dt_string, args.delta, args.epsilon,args.lr,args.batch))
-str_bestmodel_plot = os.path.join(destdir,"{}_{}_{}_{}_{}.png".format(dt_string,args.delta, args.epsilon, args.lr,args.batch))
-str_bestmodel_nii = os.path.join(destdir,"{}_{}_{}_{}_{}.nii.gz".format(dt_string,args.delta, args.epsilon, args.lr,args.batch))
+str_bestmodel = os.path.join(destdir,"{}.pt".format(dt_string))
+str_bestmodel_plot = os.path.join(destdir,"{}.png".format(dt_string))
+str_bestmodel_nii = os.path.join(destdir,"{}.nii.gz".format(dt_string))
 
 # Remove temp file 
 os.remove('checkpoint.pt')
