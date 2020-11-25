@@ -1,7 +1,7 @@
 ## Author : Nicolas Farrugia, Maëlle Freteault, February 2020
 from matplotlib import pyplot as plt 
 import torch
-from torchvision.io import read_video,read_video_timestamps
+#from torchvision.io import read_video,read_video_timestamps
 import torchvision.transforms as transforms
 import torch.nn as nn
 from importlib import reload
@@ -334,7 +334,9 @@ def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2,epsilon=1e-4):
     net.soundnet.eval()
     net.encoding_fmri.train()
 
-    for batch_idx, (wav,audioset,imagenet,places,fmri) in enumerate(sample(trainloader,k=len(trainloader))):
+    for batch in trainloader:
+        print('beurp')
+        print(len(batch))
         optimizer.zero_grad()
         bsize = wav.shape[0]
 
@@ -352,7 +354,7 @@ def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2,epsilon=1e-4):
         #print(fmri_p.shape)
         # Calculate loss
         
-        fmri = fmri.cuda()
+        #fmri = fmri.cuda()
         #print(fmri.shape)
         all_fmri.append(fmri.cpu().numpy().reshape(bsize,-1))
         all_fmri_p.append(fmri_p.detach().cpu().numpy().reshape(bsize,-1))
@@ -387,7 +389,7 @@ def test(epoch,testloader,net,optimizer,mseloss,delta=1e-2,epsilon=1e-4):
     running_loss = 0
     net.eval()
     with torch.no_grad():
-        for batch_idx, (wav,audioset,imagenet,places,fmri) in enumerate(sample(testloader,k=len(testloader))):
+        for batch_idx, (wav,fmri) in enumerate(testloader):
 
             bsize = wav.shape[0]
 
@@ -408,7 +410,7 @@ def test(epoch,testloader,net,optimizer,mseloss,delta=1e-2,epsilon=1e-4):
 
             # For 1D output
             
-            fmri = fmri.view(bsize,-1).cuda()
+            fmri = fmri.view(bsize,-1)
             #print(fmri.shape)
 
             if net.maskattention is not None:
@@ -599,7 +601,7 @@ def test_r2(testloader,net,mseloss):
     all_fmri_p = []
     net.eval()
     with torch.no_grad():
-        for (wav,audioset,imagenet,places,fmri) in testloader:
+        for (wav,fmri) in testloader:
 
             bsize = wav.shape[0]
             

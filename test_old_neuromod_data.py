@@ -15,6 +15,8 @@ from sklearn.metrics import r2_score
 
 from nilearn.plotting import plot_stat_map
 from nilearn.regions import signals_to_img_labels
+from pytorchtools import EarlyStopping
+from datetime import datetime
 
 #1 - get input
 
@@ -110,7 +112,7 @@ class SequentialDataset(IterableDataset):
             else:
                 batch_end = batch_start+self.batch_size
             batches.extend((idx, dataset_x[batch_start:batch_end], dataset_y[batch_start:batch_end]))    
-            batches = sample(batches, len(batches))
+        batches = sample(batches, len(batches))
         return batches
 
     def __len__(self):
@@ -184,7 +186,7 @@ lr = 0.01
 nbepoch = 100
 
 net = encod.SoundNetEncoding_conv(pytorch_param_path='./sound8.pth',fmrihidden=fmrihidden,nroi_attention=nroi)
-net = net.cuda()
+net.to("cpu")
 mseloss = nn.MSELoss(reduction='sum')
 
 ### Optimizer and Schedulers
