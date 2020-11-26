@@ -2,13 +2,12 @@ import os
 import warnings
 from itertools import islice
 from tqdm import tqdm
-from random import sample,shuffle
-import librosa
+from random import shuffle
 
 import numpy as np
 import torch
 from torch import nn
-from torch.utils.data import IterableDataset, DataLoader
+from torch.utils.data import DataLoader
 from train_utils import train, test, test_r2
 
 from sklearn.metrics import r2_score
@@ -19,50 +18,11 @@ from pytorchtools import EarlyStopping
 from datetime import datetime
 
 #1 - get input
-
-def fetchMRI(videofile,fmrilist):
-    ### isolate the mkv file (->filename) and the rest of the path (->videopath)
-
-    videopath,filename = os.path.split(videofile)
-    #formatting the name to correspond to mri run formatting
-    name = filename.replace('_', '')
-    if name.startswith('the'):
-        name = name.replace('the', '', 1)
-    if name.find('life') > -1 :
-        name = name.replace('life1', 'life')
-
-    name = name.replace('seg','_run-')
-    name = name.replace('subsampl','')
-    ## Rename to match the parcellated filenames
-    name = name.replace('.wav','npz.npz')
-
-    # list of all parcellated filenames 
-
-    # match videofilename with parcellated files
-    mriMatchs = []
-    for curfile in fmrilist:
-        _, cur_name = os.path.split(curfile)
-        if cur_name[23:] == (name):
-            mriMatchs.append(curfile)    
-    #in case of multiple run for 1 film segment
-    name_seg = filename[:-4]
-
-    if len(mriMatchs) > 1 :
-        numSessions = []
-        for run in mriMatchs :
-            index_sess = run.find('ses-vid')
-            numSessions.append(int(run[index_sess+7:index_sess+10]))
-            
-        if numSessions[0] < numSessions[1] : 
-            return [(videofile, mriMatchs[0]), (videofile, mriMatchs[1])]
-
-        else : 
-            return [(videofile, mriMatchs[1]), (videofile, mriMatchs[0])]
-    else :
-        return [(videofile, mriMatchs[0])]
+from files_utils import fetchMRI
+from audio_utils import convert_Audio
 
 #1.1 - get films + subjects parcellation paths
-stimuli_path = '/home/maelle/Database/cneuromod/movie10/stimuli'
+stimuli_path = '/home/brain/Data_Base/cneuromod/movie10/stimuli' #'/home/maelle/Database/cneuromod/movie10/stimuli'
 stimuli_dic = {}
 for film in os.listdir(stimuli_path):
     film_path = os.path.join(stimuli_path, film)
@@ -70,7 +30,7 @@ for film in os.listdir(stimuli_path):
         film_wav = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.wav']
         stimuli_dic[film] = sorted(film_wav)
 
-path_parcellation = '/home/maelle/Database/movie10_parc'
+path_parcellation = '/home/brain/Data_Base/movie10_parc' #'/home/maelle/Database/movie10_parc'
 all_subs = []
 for sub_dir in sorted(os.listdir(path_parcellation)):
     sub_path = os.path.join(path_parcellation, sub_dir)
@@ -86,40 +46,12 @@ for i, sub in enumerate(all_subs) :
         all_subs[i] = sub_segments
 
 #sub_parc[film] = [(seg1, run1),(seg2, run2),(seg3, run3), ...]
+
 #2 - input processing
-
 #3 - Create Dataset
-class SequentialDataset(IterableDataset):
-    def __init__(self, x, y, batch_size):
-        super(SequentialDataset).__init__()
-
-        self.x = x
-        self.y = y
-        self.batch_size = batch_size
-
-        self.batches = []
-        for i, (seg_x, seg_y) in enumerate(zip(x,y)):
-            seg = self.__create_batchs__(seg_x, seg_y)
-            self.batches.extend(seg)
-        self.batches = sample(self.batches, len(self.batches))
-
-    def __create_batchs__(self, dataset_x, dataset_y):
-        batches = []
-        total_nb_inputs = len(dataset_x)
-        for idx, batch_start in enumerate(range(0, total_nb_inputs, self.batch_size)):
-            if batch_start+self.batch_size>total_nb_inputs:
-                batch_end = total_nb_inputs
-            else:
-                batch_end = batch_start+self.batch_size
-            batches.extend((idx, dataset_x[batch_start:batch_end], dataset_y[batch_start:batch_end]))    
-        batches = sample(batches, len(batches))
-        return batches
-
-    def __len__(self):
-        return(len(self.batches)) 
-
-    def __iter__(self):
-        return iter(self.batches)
+from Datasets_utils import SequentialDataset
+from audio_utils import load_audio_by_bit
+import librosa
 
 #load files !!!!!
 bourne = 'bourne_supremacy'
@@ -135,10 +67,7 @@ sr = 22050
 x = []
 for (audio_path, mri_path) in DataTest :
     length = librosa.get_duration(filename = audio_path)
-    audio_segment = []
-    for start in np.arange(0, length, tr) : 
-        (audio_chunk, _) = librosa.core.load(audio_path, sr=sr, mono=True, offset = start, duration = tr)
-        audio_segment.append(audio_chunk)
+    audio_segment = load_audio_by_bit(audio_path, 0, length, bitSize = tr, sr = sr)
     x.append(audio_segment)
     
 y = [np.load(mri_path)['X'] for (audio_path, mri_path) in DataTest]
@@ -150,12 +79,6 @@ for i, (seg_wav, seg_fmri) in enumerate(zip(x, y)) :
     x[i] = seg_wav[:min_len]
     y[i] = seg_fmri[:min_len]
 
-
-#xDim = (len(x), len(x[0]), len(x[0][0]))
-#yDim = (len(y), len(y[0]), len(y[0][0]))
-#function to define dimensions of a list --> to convert into numpy array for a more efficient code
-#do and adapt after.
-
 train_percent = 0.6
 test_percent = 0.2
 val_percent = 1 - train_percent - test_percent
@@ -166,7 +89,7 @@ total_len = len(dataset)
 train_len = int(np.floor(train_percent*total_len))
 val_len = int(np.floor(val_percent*total_len))
 test_len = total_len-train_len-val_len
-print(total_len, train_len, test_len, val_len)
+print(f'size of total, train, val and set : ', total_len, train_len, test_len, val_len)
 
 
 loader = DataLoader(dataset, batch_size=None)
