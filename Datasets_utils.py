@@ -13,7 +13,9 @@ class SequentialDataset(IterableDataset):
         self.batches = []
         for i, (seg_x, seg_y) in enumerate(zip(x,y)):
             seg = self.__create_batchs__(seg_x, seg_y)
+            print(len(seg))
             self.batches.extend(seg)
+
         self.batches = sample(self.batches, len(self.batches))
 
     def __create_batchs__(self, dataset_x, dataset_y):

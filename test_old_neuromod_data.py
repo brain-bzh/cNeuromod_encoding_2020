@@ -8,21 +8,18 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from train_utils import train, test, test_r2
-
-from sklearn.metrics import r2_score
 
 from nilearn.plotting import plot_stat_map
 from nilearn.regions import signals_to_img_labels
-from pytorchtools import EarlyStopping
 from datetime import datetime
+from matplotlib import pyplot as plt 
 
 #1 - get input
 from files_utils import fetchMRI
 from audio_utils import convert_Audio
 
 #1.1 - get films + subjects parcellation paths
-stimuli_path = '/home/brain/Data_Base/cneuromod/movie10/stimuli' #'/home/maelle/Database/cneuromod/movie10/stimuli'
+stimuli_path = '/home/maelle/Database/cneuromod/movie10/stimuli' #'/home/brain/Data_Base/cneuromod/movie10/stimuli'
 stimuli_dic = {}
 for film in os.listdir(stimuli_path):
     film_path = os.path.join(stimuli_path, film)
@@ -30,7 +27,7 @@ for film in os.listdir(stimuli_path):
         film_wav = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.wav']
         stimuli_dic[film] = sorted(film_wav)
 
-path_parcellation = '/home/brain/Data_Base/movie10_parc' #'/home/maelle/Database/movie10_parc'
+path_parcellation = '/home/maelle/Database/movie10_parc' #'/home/brain/Data_Base/movie10_parc'
 all_subs = []
 for sub_dir in sorted(os.listdir(path_parcellation)):
     sub_path = os.path.join(path_parcellation, sub_dir)
@@ -118,6 +115,13 @@ lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,factor=0.2,patie
 
 early_stopping = EarlyStopping(patience=10, verbose=True,delta=1e-6)
 
+enddate = datetime.now()
+
+#---------------------------------------------------------------------------------------------------------------------------------
+#5 - Train & Test
+
+from train_utils_new import train, test, test_r2, EarlyStopping
+
 ### Main Training Loop 
 startdate = datetime.now()
 
@@ -153,15 +157,11 @@ except KeyboardInterrupt:
     print("Interrupted by user")
 
 test_loss = test(1,testloader,net,optimizer,mseloss=mseloss)
-#print("Test Loss : {}".format(test_loss))
-
-enddate = datetime.now()
-
-#---------------------------------------------------------------------------------------------------------------------------------
-#5 - Train & Test
-
+print("Test Loss : {}".format(test_loss))
 
 #6 - Visualisation
+
+mistroifile = '/home/maelle/Database/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 
 dt_string = enddate.strftime("%Y-%m-%d-%H-%M-%S")
 str_bestmodel = os.path.join(destdir,"{}.pt".format(dt_string))
