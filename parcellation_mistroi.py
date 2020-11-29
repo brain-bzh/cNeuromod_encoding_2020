@@ -18,7 +18,7 @@ basepath = '/home/nfarrugi/git/neuromod/cneuromod/movie10/derivatives/fmriprep1.
 
 subjectdir = os.path.join(basepath,sys.argv[1])
 
-savepath = 
+savepath = '/home/nfarrugi/movie10_parc'
 
 mistroicsv = '/home/nfarrugi/git/MIST_parcellation/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
 mistroi_labelsimg = '/home/nfarrugi/git/MIST_parcellation/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
@@ -56,8 +56,8 @@ def parcellate_MIST(filepath_fmri,labels_img=mistroi_labelsimg,save=False,savepa
 for s in os.walk(subjectdir):
     curdir = s[0]
     if (curdir[-4:]=='func'):
-        #print(curdir)
-        #print('list of files : ')
+        print(curdir)
+        print('list of files : ')
         
         for curfile in s[2]:
             curid = (curfile.find('preproc_bold.nii.gz'))
