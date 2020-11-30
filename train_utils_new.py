@@ -54,12 +54,12 @@ def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2):
     net.encoding_fmri.train()
 
     #looping on all the batches (batch_idx is here just to check if the batch are actually randomly picked)
-    for batch_nb, batch in enumerate(trainloader):
+    for batch_nb, (batch_idx, x, y) in enumerate(trainloader):
         #print(batch_nb, len(batch))
         #print(batch[0])
         optimizer.zero_grad()
         batch_size = x.shape[0]
-        #print(batch_num, batch_idx, x.shape[0], y.shape[0])
+        print(batch_num, batch_idx, x.shape[0], y.shape[0])
 
         # for 1D output
         #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)

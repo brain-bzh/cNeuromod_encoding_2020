@@ -19,7 +19,7 @@ from files_utils import fetchMRI
 from audio_utils import convert_Audio
 
 #1.1 - get films + subjects parcellation paths
-stimuli_path = '/home/brain/Data_Base/cneuromod/movie10/stimuli' #'/home/maelle/Database/cneuromod/movie10/stimuli' 
+stimuli_path = '/home/maelle/Database/cneuromod/movie10/stimuli'#'/home/brain/Data_Base/cneuromod/movie10/stimuli' 
 stimuli_dic = {}
 for film in os.listdir(stimuli_path):
     film_path = os.path.join(stimuli_path, film)
@@ -27,7 +27,7 @@ for film in os.listdir(stimuli_path):
         film_wav = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.wav']
         stimuli_dic[film] = sorted(film_wav)
 
-path_parcellation = '/home/brain/Data_Base/movie10_parc' #'/home/maelle/Database/movie10_parc'
+path_parcellation = '/home/maelle/Database/movie10_parc'#'/home/brain/Data_Base/movie10_parc'
 all_subs = []
 for sub_dir in sorted(os.listdir(path_parcellation)):
     sub_path = os.path.join(path_parcellation, sub_dir)
@@ -113,14 +113,13 @@ mseloss = nn.MSELoss(reduction='sum')
 optimizer = torch.optim.Adam(net.parameters(), lr = lr)
 lr_sched = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,factor=0.2,patience=5,threshold=1e-2,cooldown=2)
 
-early_stopping = EarlyStopping(patience=10, verbose=True,delta=1e-6)
-
 enddate = datetime.now()
 
 #---------------------------------------------------------------------------------------------------------------------------------
 #5 - Train & Test
 
 from train_utils_new import train, test, test_r2, EarlyStopping
+early_stopping = EarlyStopping(patience=10, verbose=True,delta=1e-6)
 
 ### Main Training Loop 
 startdate = datetime.now()
