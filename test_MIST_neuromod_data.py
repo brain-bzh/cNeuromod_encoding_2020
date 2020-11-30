@@ -19,7 +19,7 @@ from files_utils import fetchMRI
 from audio_utils import convert_Audio
 
 #1.1 - get films + subjects parcellation paths
-stimuli_path = '/home/maelle/Database/cneuromod/movie10/stimuli'#'/home/brain/Data_Base/cneuromod/movie10/stimuli' 
+stimuli_path = '/home/brain/Data_Base/cneuromod/movie10/stimuli'#'/home/maelle/Database/cneuromod/movie10/stimuli' 
 stimuli_dic = {}
 for film in os.listdir(stimuli_path):
     film_path = os.path.join(stimuli_path, film)
@@ -27,7 +27,7 @@ for film in os.listdir(stimuli_path):
         film_wav = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.wav']
         stimuli_dic[film] = sorted(film_wav)
 
-path_parcellation = '/home/maelle/Database/movie10_parc'#'/home/brain/Data_Base/movie10_parc'
+path_parcellation = '/home/brain/Data_Base/movie10_parc'#'/home/maelle/Database/movie10_parc'
 all_subs = []
 for sub_dir in sorted(os.listdir(path_parcellation)):
     sub_path = os.path.join(path_parcellation, sub_dir)
@@ -61,14 +61,15 @@ DataTest = all_subs[0][film]
 tr=1.49
 sr = 22050
 
+print("getting audio files ...")
 x = []
 for (audio_path, mri_path) in DataTest :
     length = librosa.get_duration(filename = audio_path)
     audio_segment = load_audio_by_bit(audio_path, 0, length, bitSize = tr, sr = sr)
     x.append(audio_segment)
-    
+print("getting fMRI files ...")  
 y = [np.load(mri_path)['X'] for (audio_path, mri_path) in DataTest]
-
+print("done.")
 #resize matrix to have the same number of tr : 
 
 for i, (seg_wav, seg_fmri) in enumerate(zip(x, y)) : 
