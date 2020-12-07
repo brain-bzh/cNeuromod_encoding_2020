@@ -51,9 +51,9 @@ def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2):
     all_y = []
     all_y_predicted = []
     running_loss = 0
+    net.soundnet.eval()
     net.encoding_fmri.train()
 
-    #looping on all the batches (batch_idx is here just to check if the batch are actually randomly picked)
     for batch_nb, (x, y) in enumerate(trainloader):
         optimizer.zero_grad()
         batch_size = x.shape[0]
@@ -81,7 +81,6 @@ def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2):
         all_y_predicted.append(predicted_y.detach().cpu().numpy().reshape(batch_size,-1))
         running_loss += loss.item()
         
-
     r2_model = r2_score(np.vstack(all_y),np.vstack(all_y_predicted),multioutput='raw_values') 
     return running_loss/batch_nb, r2_model
 

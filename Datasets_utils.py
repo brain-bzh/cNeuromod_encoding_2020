@@ -17,7 +17,6 @@ class SequentialDataset(IterableDataset):
             self.batches.extend(seg)
 
         self.batches = sample(self.batches, len(self.batches))
-        print(len(self.batches))
 
     def __create_batchs__(self, dataset_x, dataset_y):
         batches = []
@@ -28,7 +27,7 @@ class SequentialDataset(IterableDataset):
             else:
                 batch_end = batch_start+self.batch_size
 
-            batches.append((torch.tensor(dataset_x[batch_start:batch_end]), torch.tensor(dataset_y[batch_start:batch_end])))
+            batches.append((torch.Tensor(dataset_x[batch_start:batch_end]), torch.Tensor(dataset_y[batch_start:batch_end])))
         batches = sample(batches, len(batches))
         return batches
 

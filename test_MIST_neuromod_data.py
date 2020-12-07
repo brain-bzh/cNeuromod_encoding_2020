@@ -2,7 +2,7 @@ import os
 import warnings
 from itertools import islice
 from tqdm import tqdm
-from random import shuffle
+from random import shuffle, sample
 
 import numpy as np
 import torch
@@ -91,9 +91,14 @@ print(f'size of total, train, val and set : ', total_len, train_len, test_len, v
 
 
 loader = DataLoader(dataset, batch_size=None)
-trainloader = islice(loader, 0, train_len)
-valloader = islice(loader, train_len, train_len+val_len)
-testloader = islice(loader, train_len+val_len, None)
+#trainloader = islice(loader, 0, train_len)
+#valloader = islice(loader, train_len, train_len+val_len)
+#testloader = islice(loader, train_len+val_len, None)
+
+loader = list(loader)
+trainloader = sample(loader[:train_len], k=train_len)
+valloader = sample(loader[train_len:train_len+val_len], k=val_len)
+testloader = sample(loader[train_len+val_len:train_len+val_len+test_len], k=test_len)
 
 #4 - Models
 from models import soundnet_model as sdn
