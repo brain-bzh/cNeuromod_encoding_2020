@@ -134,7 +134,7 @@ class SoundNetEncoding_conv_2(nn.Module):
     def __init__(self,pytorch_param_path,nroi=210,fmrihidden=1000,nroi_attention=None, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,transfer=True,preload=True):
         super(SoundNetEncoding_conv_2, self).__init__()
 
-        self.soundnet = SoundNet8_pytorch()
+        self.soundnet = snd.SoundNet8_pytorch()
         self.fmrihidden = fmrihidden
         self.nroi = nroi
 
@@ -186,7 +186,7 @@ class SoundNetEncoding_conv_3(nn.Module):
     def __init__(self,pytorch_param_path,nroi=210,fmrihidden=1000,nroi_attention=None, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,transfer=True,preload=True):
         super(SoundNetEncoding_conv_3, self).__init__()
 
-        self.soundnet = SoundNet8_pytorch()
+        self.soundnet = snd.SoundNet8_pytorch()
         self.fmrihidden = fmrihidden
         self.nroi = nroi
 
