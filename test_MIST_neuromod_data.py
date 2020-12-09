@@ -55,7 +55,7 @@ bourne = 'bourne_supremacy'
 wolf = 'wolf_of_wall_street'
 life = "life"
 hidden = "hidden_figures"
-film = bourne
+film = wolf
 DataTest = all_subs[0][film]
 
 tr=1.49
@@ -81,7 +81,7 @@ train_percent = 0.6
 test_percent = 0.2
 val_percent = 1 - train_percent - test_percent
 
-dataset = SequentialDataset(x, y, batch_size=60)
+dataset = SequentialDataset(x, y, batch_size=70)
 
 total_len = len(dataset)
 train_len = int(np.floor(train_percent*total_len))

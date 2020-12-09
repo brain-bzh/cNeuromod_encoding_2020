@@ -21,7 +21,6 @@ fmri_data = np.load('X.npy')
 ################ I - defining the model ##############################
 nroi = 210
 fmrihidden = 1000
-batch_size = 10
 
 train_percent = 0.6 
 test_percent = 0.2
