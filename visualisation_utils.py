@@ -45,7 +45,7 @@ for color, (key, data_dict) in zip(colors,all_data.items()):
     legends.append(key+'_Train')
     legends.append(key+'_Val')
 
-plt.legend(legends)
+plt.legend(legends, loc='upper right')
 plt.title("loss")
 loss.savefig(os.path.join(out_directory, 'all_films_loss.jpg'))
 plt.close()
@@ -59,7 +59,7 @@ for color, (key, data_dict) in zip(colors,all_data.items()):
     legends.append(key+'_Train')
     legends.append(key+'_Val')
 
-plt.legend(legends)
+plt.legend(legends, loc='upper right')
 plt.title("r2_max")
 r2_max.savefig(os.path.join(out_directory, 'all_films_r2_max.jpg'))
 plt.close()
@@ -74,7 +74,7 @@ for color, (key, data_dict) in zip(colors,all_data.items()):
     legends.append(key+'_Train')
     legends.append(key+'_Val')
 
-plt.legend(legends)
+plt.legend(legends, loc='upper right')
 plt.title("r2_mean")
 r2_mean.savefig(os.path.join(out_directory, 'all_films_r2_mean.jpg'))
 plt.close()
