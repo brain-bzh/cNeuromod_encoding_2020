@@ -1,5 +1,8 @@
-
 import os
+
+def create_dir_if_needed(path):
+    if not os.path.isdir(path):
+        os.makedirs(path)
 
 def fetchMRI(videofile,fmrilist):
     ### isolate the mkv file (->filename) and the rest of the path (->videopath)
@@ -41,3 +44,27 @@ def fetchMRI(videofile,fmrilist):
             return [(videofile, mriMatchs[1]), (videofile, mriMatchs[0])]
     else :
         return [(videofile, mriMatchs[0])]
+
+def associate_stimuli_with_Parcellation(stimuli_path, path_parcellation):
+    stimuli_dic = {}
+    for film in os.listdir(stimuli_path):
+        film_path = os.path.join(stimuli_path, film)
+        if os.path.isdir(film_path):
+            film_wav = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.wav']
+            stimuli_dic[film] = sorted(film_wav)
+
+    all_subs = []
+    for sub_dir in sorted(os.listdir(path_parcellation)):
+        sub_path = os.path.join(path_parcellation, sub_dir)
+        all_subs.append([os.path.join(sub_path, mri_data) for mri_data in os.listdir(sub_path) if mri_data[-4:]==".npz"])
+
+    for i, sub in enumerate(all_subs) : 
+        sub_segments = {}
+        for film, segments in stimuli_dic.items() : 
+            sub_segments[film] = []
+            for j in range(len(segments)):
+                sub_segments[film].extend(fetchMRI(segments[j], sub))
+
+            all_subs[i] = sub_segments
+
+    return all_subs
