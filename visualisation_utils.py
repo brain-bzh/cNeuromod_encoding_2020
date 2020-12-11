@@ -9,78 +9,63 @@ from nilearn.regions import signals_to_img_labels
 
 from matplotlib import pyplot as plt 
 
-out_directory = '/home/maelle/Results/encoding_11_2020/analysis'
 
-bourne_map = '/home/maelle/Results/encoding_11_2020/bourne_supremacy/2020-12-07-18-12-36.nii.gz'
-bourne_data = '/home/maelle/Results/encoding_11_2020/bourne_supremacy/2020-12-07-18-12-36.pt'
+data_path = '/home/maelle/Results/encoding_12_2020/'
+out_directory = '/home/maelle/Results/encoding_12_2020/analysis'
 
-wolf_map = '/home/maelle/Results/encoding_11_2020/wolf_of_wall_street/2020-12-07-20-19-21.nii.gz'
-wolf_data = '/home/maelle/Results/encoding_11_2020/wolf_of_wall_street/2020-12-07-20-19-21.pt'
+def plot_train_val_data(subject, data_films, measure, colors = ['b', 'g', 'm', 'r']) : 
+    f = plt.figure()
+    legends = []
+    for color, (key, data_dict) in zip(colors, data_films):
+        plt.plot(data_dict['train_'+str(measure)], color+'-')
+        plt.plot(data_dict['val_'+str(measure)], color+'--')
+        legends.append(key+'_Train')
+        legends.append(key+'_Val')
 
-hidden_map = '/home/maelle/Results/encoding_11_2020/hidden_figures/2020-12-07-19-18-53.nii.gz'
-hidden_data = '/home/maelle/Results/encoding_11_2020/hidden_figures/2020-12-07-19-18-53.pt'
+    plt.legend(legends, loc='upper right')
+    plt.title(str(measure)+' in '+str(subject))
+    f.savefig(os.path.join(out_directory, 'all_films_{}_in_{}.jpg'.format(measure, subject)))
+    plt.close()
 
-life_map = '/home/maelle/Results/encoding_11_2020/life/2020-12-07-20-06-15.nii.gz'
-life_data = '/home/maelle/Results/encoding_11_2020/life/2020-12-07-20-06-15.pt'
+all_data = {}
+all_maps = {}
+previous_sub = 'none'
+for path, dirs, files in os.walk(data_path):
+    for file in files:
 
-all_data = {'bourne':bourne_data, 'wolf':wolf_data, 'hidden':hidden_data, 'life':life_data}
-all_maps = {'bourne':bourne_map, 'wolf':wolf_map, 'hidden':hidden_map, 'life':life_map}
-#(1) superposer les courbes d'apprentissage pour les différents films, et  
-# (2) faire la moyenne des cartes de R2 entre films?
+        index = path.find('sub')
+        if index != -1 :
+            sub = path[index:index+5]
+        if sub!=previous_sub : 
+            all_data[sub] = []
+            all_maps[sub] = []
+            previous_sub = sub
 
-for key, value in all_data.items():
-    all_data[key] = load(value)
+        dir_name = os.path.basename(path)
+        file_path = os.path.join(path, file)
 
-for key, value in all_maps.items() :
-    all_maps[key] = image.load_img(value)
+        name, ext = os.path.splitext(file)
 
-colors = ['b', 'g', 'm', 'r']
+        if ext == '.pt':
+            all_data[sub].append((dir_name, file_path))
+        elif ext == '.gz':
+            all_maps[sub].append((dir_name, file_path))
 
-#loss
-loss = plt.figure()
-legends = []
-for color, (key, data_dict) in zip(colors,all_data.items()):
-    plt.plot(data_dict['train_loss'], color+'-')
-    plt.plot(data_dict['val_loss'], color+'--')
-    legends.append(key+'_Train')
-    legends.append(key+'_Val')
+for sub, films in all_data.items():
+    all_loaded = [(dir_name, load(file_path)) for (dir_name, file_path) in films]
+    all_data[sub] = all_loaded
 
-plt.legend(legends, loc='upper right')
-plt.title("loss")
-loss.savefig(os.path.join(out_directory, 'all_films_loss.jpg'))
-plt.close()
+for sub, films in all_maps.items():
+    all_loaded = [(dir_name, image.load_img(file_path)) for (dir_name, file_path) in films]
+    all_maps[sub] = all_loaded
 
-#r2_max
-r2_max = plt.figure()
-legends = []
-for color, (key, data_dict) in zip(colors,all_data.items()):
-    plt.plot(data_dict['train_r2_max'], color+'-')
-    plt.plot(data_dict['val_r2_max'], color+'--')
-    legends.append(key+'_Train')
-    legends.append(key+'_Val')
+for sub, data in all_data.items():
+    #plot_train_val_data(sub, data, "loss")
+    #plot_train_val_data(sub, data, "r2_max")
+    #plot_train_val_data(sub, data, "r2_mean")
 
-plt.legend(legends, loc='upper right')
-plt.title("r2_max")
-r2_max.savefig(os.path.join(out_directory, 'all_films_r2_max.jpg'))
-plt.close()
+#r2 map mean
 
-
-#r2_mean
-r2_mean = plt.figure()
-legends = []
-for color, (key, data_dict) in zip(colors,all_data.items()):
-    plt.plot(data_dict['train_r2_mean'], color+'-')
-    plt.plot(data_dict['val_r2_mean'], color+'--')
-    legends.append(key+'_Train')
-    legends.append(key+'_Val')
-
-plt.legend(legends, loc='upper right')
-plt.title("r2_mean")
-r2_mean.savefig(os.path.join(out_directory, 'all_films_r2_mean.jpg'))
-plt.close()
-
-
-    
 # f = plt.figure()
 # ax = plt.subplot(1,1,1)
 # plot_stat_map(a, figure=f)
