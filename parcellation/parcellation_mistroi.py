@@ -18,7 +18,7 @@ basepath = '/home/nfarrugi/git/neuromod/cneuromod/movie10/derivatives/fmriprep1.
 
 subjectdir = os.path.join(basepath,sys.argv[1])
 
-savepath = '/home/nfarrugi/movie10_parc'
+savepath = '/home/nfarrugi/movie10_parc2'
 
 mistroicsv = '/home/nfarrugi/git/MIST_parcellation/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
 mistroi_labelsimg = '/home/nfarrugi/git/MIST_parcellation/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
