@@ -31,25 +31,30 @@ def parcellate_MIST(filepath_fmri,labels_img=mistroi_labelsimg,save=False,savepa
     idfunc = filepath_fmri.find('/func/')
 
     filebase = filepath_fmri[idfunc+6:-51]
+    filepath = os.path.join(savepath,filebase+'npz.npz')
+    if os.path.isfile(filepath):
+        print("File {} already exists".format(filepath))
+        return np.load(filepath)['X']
+    else:
 
-    ## Initialise the masker
+        ## Initialise the masker
 
-    mymasker = NiftiLabelsMasker(labels_img=labels_img,mask_img=maskpath_fmri,standardize=False,detrend=False,t_r=1.49,smoothing_fwhm=8)
+        mymasker = NiftiLabelsMasker(labels_img=labels_img,mask_img=maskpath_fmri,standardize=False,detrend=False,t_r=1.49,smoothing_fwhm=8)
 
-    mymasker.fit()
+        mymasker.fit()
 
-    # Load the confounds using the Params24 strategy 
-    confounds = Params24().load(tsvfile_fmri)
-    ## Apply the masker 
+        # Load the confounds using the Params24 strategy 
+        confounds = Params24().load(tsvfile_fmri)
+        ## Apply the masker 
 
-    X = mymasker.fit_transform(filepath_fmri,confounds=confounds)
-    
-    if save:
-        os.makedirs(savepath,exist_ok=True)
+        X = mymasker.fit_transform(filepath_fmri,confounds=confounds)
         
-        np.savez_compressed(os.path.join(savepath,filebase+'npz'),X=X)
-    
-    return X
+        if save:
+            os.makedirs(savepath,exist_ok=True)
+            
+            np.savez_compressed(os.path.join(savepath,filebase+'npz'),X=X)
+        
+        return X
     
     
 
@@ -66,8 +71,10 @@ for s in os.walk(subjectdir):
                 if curid >0:
                     print('Parcellating file ' + os.path.join(curdir,curfile))
                     X = parcellate_MIST(os.path.join(curdir,curfile),save=True,savepath=savepath)
-    except:
-        print("error with file {}".format(curfile))
+    except Exception as e:
+        print("Error with file {}".format(curfile))
+        print(e)
+
 
 
 # Connectome tests

@@ -67,8 +67,9 @@ for s in os.walk(subjectdir):
                 if curid >0:
                     print('Parcellating file ' + os.path.join(curdir,curfile))
                     X = parcellate_auditory(os.path.join(curdir,curfile),auditorymask='parcellation/STG_middle.nii.gz',save=True,savepath=savepath)                
-    except:
+    except Exception as e:
         print("Error with file {}".format(curfile))
+        print(e)
 
 
 # Connectome tests
