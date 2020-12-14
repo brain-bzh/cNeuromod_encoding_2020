@@ -55,17 +55,20 @@ def parcellate_auditory(filepath_fmri,auditorymask,save=False,savepath='./result
     
 
 for s in os.walk(subjectdir):
-    curdir = s[0]
-    if (curdir[-4:]=='func'):
-        print(curdir)
-        print('list of files : ')
-        
-        for curfile in s[2]:
-            curid = (curfile.find('preproc_bold.nii.gz'))
+    try:
+        curdir = s[0]
+        if (curdir[-4:]=='func'):
+            print(curdir)
+            print('list of files : ')
             
-            if curid >0:
-                print('Parcellating file ' + os.path.join(curdir,curfile))
-                X = parcellate_auditory(os.path.join(curdir,curfile),auditorymask='parcellation/STG_middle.nii.gz',save=True,savepath=savepath)                
+            for curfile in s[2]:
+                curid = (curfile.find('preproc_bold.nii.gz'))
+                
+                if curid >0:
+                    print('Parcellating file ' + os.path.join(curdir,curfile))
+                    X = parcellate_auditory(os.path.join(curdir,curfile),auditorymask='parcellation/STG_middle.nii.gz',save=True,savepath=savepath)                
+    except:
+        print("Error with file {}".format(curfile))
 
 
 # Connectome tests

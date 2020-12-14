@@ -55,16 +55,19 @@ def parcellate_MIST(filepath_fmri,labels_img=mistroi_labelsimg,save=False,savepa
 
 for s in os.walk(subjectdir):
     curdir = s[0]
-    if (curdir[-4:]=='func'):
-        print(curdir)
-        print('list of files : ')
-        
-        for curfile in s[2]:
-            curid = (curfile.find('preproc_bold.nii.gz'))
+    try:
+        if (curdir[-4:]=='func'):
+            print(curdir)
+            print('list of files : ')
             
-            if curid >0:
-                print('Parcellating file ' + os.path.join(curdir,curfile))
-                X = parcellate_MIST(os.path.join(curdir,curfile),save=True,savepath=savepath)
+            for curfile in s[2]:
+                curid = (curfile.find('preproc_bold.nii.gz'))
+                
+                if curid >0:
+                    print('Parcellating file ' + os.path.join(curdir,curfile))
+                    X = parcellate_MIST(os.path.join(curdir,curfile),save=True,savepath=savepath)
+    except:
+        print("error with file {}".format(curfile))
 
 
 # Connectome tests
