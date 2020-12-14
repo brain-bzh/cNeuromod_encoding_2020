@@ -27,7 +27,7 @@ for roinum in selectrois:
 allrois = intersect_masks(roi_imgs,threshold=0,connected=False)
 
 
-allrois.to_filename('STD_middle.nii.gz')
+allrois.to_filename('STG_middle.nii.gz')
 
 
 
