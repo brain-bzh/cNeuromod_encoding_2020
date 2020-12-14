@@ -4,55 +4,67 @@ import pandas as pd
 import pickle
 from torch import load
 
+from files_utils import create_dir_if_needed
+
 from nilearn import image, plotting
 from nilearn.plotting import plot_stat_map
 from nilearn.regions import signals_to_img_labels
+from nilearn.image import load_img, mean_img
 
 from matplotlib import pyplot as plt 
 
 
 ROI_info = '/home/maelle/Database/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
-data_path = '/home/maelle/Results/encoding_12_2020/'
-out_directory = '/home/maelle/Results/encoding_12_2020/analysis'
+data_path = '/home/maelle/Results/encoding_12_2020/batch_30'
+out_directory = '/home/maelle/Results/encoding_12_2020/analysis/batch_30'
+create_dir_if_needed(out_directory)
 
-
-def plot_train_val_data(subject, data_films, measure, colors = ['b', 'g', 'm', 'r']) : 
+def plot_train_val_data(criterion, label, data, measure, colors = ['b', 'g', 'm', 'r']) : 
     f = plt.figure()
     legends = []
-    for color, (key, data_dict) in zip(colors, data_films):
+    for color, (key, data_dict) in zip(colors, data):
         plt.plot(data_dict['train_'+str(measure)], color+'-')
         plt.plot(data_dict['val_'+str(measure)], color+'--')
         legends.append(key+'_Train')
         legends.append(key+'_Val')
 
     plt.legend(legends, loc='upper right')
-    plt.title(str(measure)+' in '+str(subject))
-    f.savefig(os.path.join(out_directory, 'all_films_{}_in_{}.jpg'.format(measure, subject)))
+    plt.title(str(measure)+' in '+str(criterion))
+    f.savefig(os.path.join(out_directory, 'all_{}_{}_in_{}.jpg'.format(label, measure, criterion)))
     plt.close()
 
-all_data = {}
-all_maps = {}
-previous_sub = 'none'
-for path, dirs, files in os.walk(data_path):
-    for file in files:
+def construct_data_dico(criterion, extension, data_path):
+    all_data = {}
+    previous_key = 'none'
+    for path, dirs, files in os.walk(data_path):
+        for file in files:
 
-        index = path.find('sub')
-        if index != -1 :
-            sub = path[index:index+5]
-        if sub!=previous_sub : 
-            all_data[sub] = []
-            all_maps[sub] = []
-            previous_sub = sub
+            dir_name = os.path.basename(path)
+            file_path = os.path.join(path, file)
+            name, ext = os.path.splitext(file)
 
-        dir_name = os.path.basename(path)
-        file_path = os.path.join(path, file)
+            sub = 'none'
+            index = path.find('sub')
+            if index != -1 :
+                sub = path[index:index+5]
 
-        name, ext = os.path.splitext(file)
+            if criterion == 'sub' :
+                key = sub
+                value = dir_name 
+            else :
+                key = dir_name
+                value = sub
 
-        if ext == '.pt':
-            all_data[sub].append((dir_name, file_path))
-        elif ext == '.gz':
-            all_maps[sub].append((dir_name, file_path))
+            if key!=previous_key : 
+                all_data[key] = []
+                previous_key = key
+
+            if ext == extension:
+                all_data[key].append((value, file_path))
+    return all_data
+    
+all_data = construct_data_dico('sub', '.pt', data_path)
+all_maps = construct_data_dico('sub', '.gz', data_path)
 
 for sub, films in all_data.items():
     all_loaded = [(dir_name, load(file_path)) for (dir_name, file_path) in films]
@@ -62,11 +74,23 @@ for sub, films in all_maps.items():
     all_loaded = [(dir_name, image.load_img(file_path)) for (dir_name, file_path) in films]
     all_maps[sub] = all_loaded
 
+#plot
+for key, data in all_data.items():
+    plot_train_val_data(key, 'films', data, "loss")
+    plot_train_val_data(key, 'films', data, "r2_max")
+    plot_train_val_data(key, 'films', data, "r2_mean")
 
+#r2 map mean
+
+for sub, films in all_maps.items():
+    save = os.path.join(out_directory, str(sub)+'.jpg')
+    nifti = [nifti_files for (film_name, nifti_files) in films]
+    mean_r2_map = mean_img(nifti)
+    plot_stat_map(mean_r2_map, threshold = 0.03, output_file=save)
+
+#BEST ROI ------------------------------------------------------------------
 df = pd.read_csv(ROI_info, sep=';', index_col=0)
-print(df['name'][1])
-
-n = 10
+n = 8
 all_index = []
 for sub, films_data in all_data.items():
     for (film, data) in films_data:
@@ -76,34 +100,19 @@ for sub, films_data in all_data.items():
         all_index.extend(list(best_index))
 
 indexes = set(all_index)
-print(indexes)
+#print(indexes)
 labels_ROI = {}
 for index in indexes:
     labels_ROI[index] = df['name'][index]
 
 for index, roi in labels_ROI.items():
-    print(index, roi)
+    print('bloup')
+    #print(index, roi)
 
 for sub, films_data in all_data.items():
     for (film, data) in films_data:
         r2_by_ROI = data['r2']
         best_index = np.flip(np.argsort(r2_by_ROI))[:n]
         best_index += 1
-        print(best_index, sub, film)
-
-
-
-
-
-#for sub, data in all_data.items():
-    #plot_train_val_data(sub, data, "loss")
-    #plot_train_val_data(sub, data, "r2_max")
-    #plot_train_val_data(sub, data, "r2_mean")
-
-#r2 map mean
-
-# f = plt.figure()
-# ax = plt.subplot(1,1,1)
-# plot_stat_map(a, figure=f)
-# f.savefig(os.path.join(out_directory, key+'.jpg'))
-# plt.close
+        #print(best_index, sub, film)
+#--------------------------------------------------------------------------------------
