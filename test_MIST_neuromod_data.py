@@ -30,8 +30,6 @@ stimuli_path = '/home/maelle/Database/cneuromod/movie10/stimuli' #'/home/brain/D
 path_parcellation = '/home/maelle/Database/movie10_parc'#'/home/brain/Data_Base/movie10_parc'
 all_subs = associate_stimuli_with_Parcellation(stimuli_path, path_parcellation)
 
-outpath = "/home/maelle/Results/encoding_12_2020"
-create_dir_if_needed(outpath)
 #Je veux lancer ce code par sujet, par film
 
 bourne = 'bourne_supremacy'
@@ -44,7 +42,7 @@ films = [bourne, wolf, life, hidden]
 subjects = [0,1,2,3]
 tr=1.49
 sr = 22050
-batchsize = 60
+batchsize = 30
 
 train_percent = 0.6
 test_percent = 0.2
@@ -54,6 +52,9 @@ nroi=210
 fmrihidden=1000
 lr = 0.01
 nbepoch = 100
+
+outpath = "/home/maelle/Results/encoding_12_2020/batch_{}".format(batchsize)
+create_dir_if_needed(outpath)
 
 for subject in subjects:
     for film in films:
@@ -107,8 +108,7 @@ for subject in subjects:
 
         ### Optimizer and Schedulers
         optimizer = optim.Adam(net.parameters(), lr = lr)
-        lr_sched = optim.lr_scheduler.ReduceLROnPlateau(optimizer,factor=0.1,patience=5,threshold=1e-4)
-
+        
         enddate = datetime.now()
 
         #---------------------------------------------------------------------------------------------------------------------------------
@@ -136,7 +136,6 @@ for subject in subjects:
                 val_r2_max.append(max(v_r2))
                 val_r2_mean.append(np.mean(v_r2))
                 print("Train Loss {} Train Mean R2 :  {} Train Max R2 : {}, Val Loss {} Val Mean R2:  {} Val Max R2 : {} ".format(train_loss[-1],train_r2_mean[-1],train_r2_max[-1],val_loss[-1],val_r2_mean[-1],val_r2_max[-1]))
-                lr_sched.step(val_loss[-1])
 
                 # early_stopping needs the R2 mean to check if it has increased, 
                 # and if it has, it will make a checkpoint of the current model
