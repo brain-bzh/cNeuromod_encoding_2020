@@ -42,7 +42,7 @@ films = [bourne, wolf, life, hidden]
 subjects = [0,1,2,3]
 tr=1.49
 sr = 22050
-batchsize = 30
+batchsize = 15
 
 train_percent = 0.6
 test_percent = 0.2

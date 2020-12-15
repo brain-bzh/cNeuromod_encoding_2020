@@ -15,8 +15,8 @@ from matplotlib import pyplot as plt
 
 
 ROI_info = '/home/maelle/Database/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
-data_path = '/home/maelle/Results/encoding_12_2020/batch_30'
-out_directory = '/home/maelle/Results/encoding_12_2020/analysis/batch_30'
+data_path = '/home/maelle/Results/encoding_12_2020/batch_15'
+out_directory = '/home/maelle/Results/encoding_12_2020/analysis/batch_15'
 create_dir_if_needed(out_directory)
 
 def plot_train_val_data(criterion, label, data, measure, colors = ['b', 'g', 'm', 'r']) : 
@@ -35,7 +35,7 @@ def plot_train_val_data(criterion, label, data, measure, colors = ['b', 'g', 'm'
 
 def construct_data_dico(criterion, extension, data_path):
     all_data = {}
-    previous_key = 'none'
+    key_list = []
     for path, dirs, files in os.walk(data_path):
         for file in files:
 
@@ -55,16 +55,16 @@ def construct_data_dico(criterion, extension, data_path):
                 key = dir_name
                 value = sub
 
-            if key!=previous_key : 
+            if key not in key_list : 
                 all_data[key] = []
-                previous_key = key
+                key_list.append(key)
 
             if ext == extension:
                 all_data[key].append((value, file_path))
     return all_data
     
-all_data = construct_data_dico('sub', '.pt', data_path)
-all_maps = construct_data_dico('sub', '.gz', data_path)
+all_data = construct_data_dico('film', '.pt', data_path)
+all_maps = construct_data_dico('film', '.gz', data_path)
 
 for sub, films in all_data.items():
     all_loaded = [(dir_name, load(file_path)) for (dir_name, file_path) in films]
@@ -76,9 +76,9 @@ for sub, films in all_maps.items():
 
 #plot
 for key, data in all_data.items():
-    plot_train_val_data(key, 'films', data, "loss")
-    plot_train_val_data(key, 'films', data, "r2_max")
-    plot_train_val_data(key, 'films', data, "r2_mean")
+    plot_train_val_data(key, 'subs', data, "loss")
+    plot_train_val_data(key, 'subs', data, "r2_max")
+    plot_train_val_data(key, 'subs', data, "r2_mean")
 
 #r2 map mean
 
@@ -106,7 +106,7 @@ for index in indexes:
     labels_ROI[index] = df['name'][index]
 
 for index, roi in labels_ROI.items():
-    print('bloup')
+    pass
     #print(index, roi)
 
 for sub, films_data in all_data.items():
