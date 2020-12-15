@@ -15,8 +15,8 @@ from matplotlib import pyplot as plt
 
 
 ROI_info = '/home/maelle/Database/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
-data_path = '/home/maelle/Results/encoding_12_2020/batch_15'
-out_directory = '/home/maelle/Results/encoding_12_2020/analysis/batch_15'
+data_path = '/home/maelle/Results/encoding_12_2020/batch_30_nROI_7'
+out_directory = '/home/maelle/Results/encoding_12_2020/analysis/batch_30_nROI_7'
 create_dir_if_needed(out_directory)
 
 def plot_train_val_data(criterion, label, data, measure, colors = ['b', 'g', 'm', 'r']) : 
@@ -63,30 +63,30 @@ def construct_data_dico(criterion, extension, data_path):
                 all_data[key].append((value, file_path))
     return all_data
     
-all_data = construct_data_dico('film', '.pt', data_path)
-all_maps = construct_data_dico('film', '.gz', data_path)
+all_data = construct_data_dico('sub', '.pt', data_path)
+#all_maps = construct_data_dico('film', '.gz', data_path)
 
 for sub, films in all_data.items():
     all_loaded = [(dir_name, load(file_path)) for (dir_name, file_path) in films]
     all_data[sub] = all_loaded
 
-for sub, films in all_maps.items():
-    all_loaded = [(dir_name, image.load_img(file_path)) for (dir_name, file_path) in films]
-    all_maps[sub] = all_loaded
+# for sub, films in all_maps.items():
+#     all_loaded = [(dir_name, image.load_img(file_path)) for (dir_name, file_path) in films]
+#     all_maps[sub] = all_loaded
 
 #plot
 for key, data in all_data.items():
-    plot_train_val_data(key, 'subs', data, "loss")
-    plot_train_val_data(key, 'subs', data, "r2_max")
-    plot_train_val_data(key, 'subs', data, "r2_mean")
+    plot_train_val_data(key, 'films', data, "loss")
+    plot_train_val_data(key, 'films', data, "r2_max")
+    plot_train_val_data(key, 'films', data, "r2_mean")
 
 #r2 map mean
 
-for sub, films in all_maps.items():
-    save = os.path.join(out_directory, str(sub)+'.jpg')
-    nifti = [nifti_files for (film_name, nifti_files) in films]
-    mean_r2_map = mean_img(nifti)
-    plot_stat_map(mean_r2_map, threshold = 0.03, output_file=save)
+# for sub, films in all_maps.items():
+    # save = os.path.join(out_directory, str(sub)+'.jpg')
+    # nifti = [nifti_files for (film_name, nifti_files) in films]
+    # mean_r2_map = mean_img(nifti)
+    # plot_stat_map(mean_r2_map, threshold = 0.03, output_file=save)
 
 #BEST ROI ------------------------------------------------------------------
 df = pd.read_csv(ROI_info, sep=';', index_col=0)

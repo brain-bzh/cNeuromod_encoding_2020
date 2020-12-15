@@ -79,7 +79,7 @@ class SoundNetEncoding(nn.Module):
         return out
 
 class SoundNetEncoding_conv(nn.Module):
-    def __init__(self,pytorch_param_path,nroi=210,fmrihidden=1000,nroi_attention=None, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,transfer=True,preload=True):
+    def __init__(self,pytorch_param_path,nroi,fmrihidden=1000,nroi_attention=None, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,transfer=True,preload=True):
         super(SoundNetEncoding_conv, self).__init__()
 
         self.soundnet = snd.SoundNet8_pytorch()

@@ -40,26 +40,27 @@ hidden = "hidden_figures"
 films = [bourne, wolf, life, hidden]
 
 subjects = [0,1,2,3]
+selected_ROI = [152,153,204,205,170,169,141]
 tr=1.49
 sr = 22050
-batchsize = 15
+batchsize = 30
 
 train_percent = 0.6
 test_percent = 0.2
 val_percent = 1 - train_percent - test_percent
 
-nroi=210
+nroi=len(selected_ROI)
 fmrihidden=1000
 lr = 0.01
 nbepoch = 100
 
-outpath = "/home/maelle/Results/encoding_12_2020/batch_{}".format(batchsize)
+outpath = "/home/maelle/Results/encoding_12_2020/batch_{}_nROI_{}".format(batchsize, nroi)
 create_dir_if_needed(outpath)
 
-for subject in subjects:
+for subject in [2]:
     for film in films:
 
-        destdir = os.path.join(outpath, 'sub_'+str(subject), film)
+        destdir = os.path.join(outpath, 'sub_{}'.format(subject), film)
         create_dir_if_needed(destdir)
 
         DataTest = all_subs[subject][film]
@@ -81,7 +82,7 @@ for subject in subjects:
             x[i] = seg_wav[:min_len]
             y[i] = seg_fmri[:min_len]
 
-        dataset = SequentialDataset(x, y, batch_size=batchsize)
+        dataset = SequentialDataset(x, y, batch_size=batchsize, selection=selected_ROI)
 
         total_len = len(dataset)
         train_len = int(np.floor(train_percent*total_len))
@@ -102,7 +103,7 @@ for subject in subjects:
 
         #|--------------------------------------------------------------------------------------------------------------------------------------
         ### Model Setup
-        net = encod.SoundNetEncoding_conv(pytorch_param_path='./sound8.pth',fmrihidden=fmrihidden,nroi_attention=nroi)
+        net = encod.SoundNetEncoding_conv(pytorch_param_path='./sound8.pth',fmrihidden=fmrihidden,nroi=nroi)
         net.to("cpu")
         mseloss = nn.MSELoss(reduction='sum')
 
@@ -184,7 +185,8 @@ for subject in subjects:
                     'r2mean' : r2model.mean(),
                     'training_time' : enddate - startdate,
                     'nhidden' : fmrihidden,
-                    'model' : net
+                    'model' : net,
+                    'selected ROI': selected_ROI
                 }
 
 
@@ -215,13 +217,13 @@ for subject in subjects:
         plt.title("Max R^2 evolution for model {}, batchsize ={} and {} hidden neurons".format("sdn_1_conv", str(batchsize), fmrihidden))
 
         ### R2 figure 
-        r2_img = signals_to_img_labels(r2model.reshape(1,-1),mistroifile)
+        #r2_img = signals_to_img_labels(r2model.reshape(1,-1),mistroifile)
 
-        ax = plt.subplot(4,1,1)
+        #ax = plt.subplot(4,1,1)
 
-        plot_stat_map(r2_img,display_mode='z',cut_coords=8,figure=f,axes=ax)
-        f.savefig(str_bestmodel_plot)
-        r2_img.to_filename(str_bestmodel_nii)
+        #plot_stat_map(r2_img,display_mode='z',cut_coords=8,figure=f,axes=ax)
+        #f.savefig(str_bestmodel_plot)
+        #r2_img.to_filename(str_bestmodel_nii)
         plt.close()
 
         save(state, str_bestmodel)

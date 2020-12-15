@@ -4,19 +4,33 @@ from torch.utils.data import IterableDataset
 import torch
 
 class SequentialDataset(IterableDataset):
-    def __init__(self, x, y, batch_size):
+    def __init__(self, x, y, batch_size, selection = None):
         super(SequentialDataset).__init__()
 
         self.x = x
-        self.y = y
+        self.y = self.__select_Y_output__(y, selection)
         self.batch_size = batch_size
 
         self.batches = []
-        for seg_x, seg_y in zip(x,y):
+        for seg_x, seg_y in zip(self.x,self.y):
             seg = self.__create_batchs__(seg_x, seg_y)
             self.batches.extend(seg)
 
         self.batches = sample(self.batches, len(self.batches))
+    
+    def __select_Y_output__(self, dataset_y, selection) : 
+        if selection == None:
+            return dataset_y
+
+        selected_y = [] 
+        for seg in dataset_y:
+            new_seg = []
+            for tr in seg:
+                roi_selection = [tr[index] for index in selection]
+                new_seg.append(roi_selection)
+            selected_y.append(new_seg)
+
+        return selected_y
 
     def __create_batchs__(self, dataset_x, dataset_y):
         batches = []
