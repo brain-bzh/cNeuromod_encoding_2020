@@ -79,7 +79,7 @@ class SoundNetEncoding(nn.Module):
         return out
 
 class SoundNetEncoding_conv(nn.Module):
-    def __init__(self,pytorch_param_path,nroi,fmrihidden=1000,nroi_attention=None, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,transfer=True,preload=True):
+    def __init__(self,pytorch_param_path,nroi,fmrihidden=1000, kernel_size = 1, nroi_attention=None, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,transfer=True,preload=True):
         super(SoundNetEncoding_conv, self).__init__()
 
         self.soundnet = snd.SoundNet8_pytorch()
@@ -100,7 +100,7 @@ class SoundNetEncoding_conv(nn.Module):
                 print("Finetuning : backbone will be optimized")
 
         self.encoding_fmri = nn.Sequential(                
-                nn.Conv2d(1024,self.nroi,kernel_size=(1,1)),
+                nn.Conv2d(1024,self.nroi,kernel_size=(kernel_size,1), padding=(kernel_size-1,1)),
                 #nn.ReLU(inplace=True),
                 #nn.Conv2d(self.fmrihidden,self.nroi,kernel_size=(1,1)),
 
