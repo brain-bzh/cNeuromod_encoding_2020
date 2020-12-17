@@ -47,7 +47,7 @@ class EarlyStopping:
         self.val_loss_min = val_loss
 
 
-def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2):
+def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
     all_y = []
     all_y_predicted = []
     running_loss = 0
@@ -62,17 +62,19 @@ def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2):
         #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)
         x =  torch.Tensor(x).view(1,1,-1, 1)          #we need to adapt the shape of the batch so it can fit into pytorch convolutions layers
         #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)
-        #x = x.cuda()                                           #then we put the tensor into the memory of the graphic card, so computations can be done faster
+        if gpu : 
+            x = x.cuda()                                           #then we put the tensor into the memory of the graphic card, so computations can be done faster
 
         # Forward pass
         predicted_y = net(x)
         predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()# as some dimensions in the output 
-        predicted_y = predicted_y[:batch_size]
-        # predicted_y = predicted_y[:batch_size]                 #FOR AUDIO ONLY : Cropping the end of the predicted fmri to match the measured bold
+        predicted_y = predicted_y[:batch_size]                #FOR AUDIO ONLY : Cropping the end of the predicted fmri to match the measured bold
         #print(f'predicted_y after squeezing and cutting to the same size as fmri data: ', predicting_y)
 
-        y = y.double()#.cuda()
-        #print(f"y_real shape : ", y.shape, "and y_predicted shape : ", predicted_y.shape)         # both must have the same shape
+        y = y.double()
+        if gpu:
+            y = y.cuda()
+        print(f"y_real shape : ", y.shape, "and y_predicted shape : ", predicted_y.shape)         # both must have the same shape
         loss=delta*mseloss(predicted_y,y)/batch_size
         loss.backward()
         optimizer.step()
@@ -85,7 +87,7 @@ def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2):
     return running_loss/batch_nb, r2_model
 
 
-def test(epoch,trainloader,net,optimizer,mseloss,delta=1e-2):
+def test(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
     all_y = []
     all_y_predicted = []
     running_loss = 0
@@ -98,12 +100,15 @@ def test(epoch,trainloader,net,optimizer,mseloss,delta=1e-2):
 
             # for 1D output 
             x =  torch.Tensor(x).view(1,1,-1, 1) 
-            #x = x.cuda()  
+            if gpu:
+                x = x.cuda()  
             # Forward pass
             predicted_y = net(x)
             predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()
             predicted_y = predicted_y[:batch_size]
-            y = y.double()#.cuda()
+            y = y.double()
+            if gpu:
+                y = y.cuda()
 
             loss=delta*mseloss(predicted_y,y)/batch_size
 
@@ -116,7 +121,7 @@ def test(epoch,trainloader,net,optimizer,mseloss,delta=1e-2):
         return running_loss/batch_nb, r2_model
 
 
-def test_r2(testloader,net,mseloss):
+def test_r2(testloader,net,mseloss, gpu=True):
     all_fmri = []
     all_fmri_p = []
     net.eval()
@@ -126,9 +131,13 @@ def test_r2(testloader,net,mseloss):
             bsize = wav.shape[0]
             
             # load data
-            wav = torch.Tensor(wav).view(1,1,-1,1)#.cuda()
+            wav = torch.Tensor(wav).view(1,1,-1,1)
+            if gpu:
+                wav = wav.cuda()
 
-            fmri = fmri.view(bsize,-1)#.cuda()
+            fmri = fmri.view(bsize,-1)
+            if gpu:
+                fmri=fmri.cuda()
 
             # Forward pass
             fmri_p = net(wav).permute(2,1,0,3).squeeze()

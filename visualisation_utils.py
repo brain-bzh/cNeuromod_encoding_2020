@@ -62,57 +62,92 @@ def construct_data_dico(criterion, extension, data_path):
             if ext == extension:
                 all_data[key].append((value, file_path))
     return all_data
-    
-all_data = construct_data_dico('sub', '.pt', data_path)
-#all_maps = construct_data_dico('film', '.gz', data_path)
 
-for sub, films in all_data.items():
-    all_loaded = [(dir_name, load(file_path)) for (dir_name, file_path) in films]
-    all_data[sub] = all_loaded
+if __name__ == "__main__":
 
-# for sub, films in all_maps.items():
-#     all_loaded = [(dir_name, image.load_img(file_path)) for (dir_name, file_path) in films]
-#     all_maps[sub] = all_loaded
+    all_data = construct_data_dico('sub', '.pt', data_path)
+    all_maps = construct_data_dico('film', '.gz', data_path)
 
-#plot
-for key, data in all_data.items():
-    plot_train_val_data(key, 'films', data, "loss")
-    plot_train_val_data(key, 'films', data, "r2_max")
-    plot_train_val_data(key, 'films', data, "r2_mean")
+    for sub, films in all_data.items():
+        all_loaded = [(dir_name, load(file_path)) for (dir_name, file_path) in films]
+        all_data[sub] = all_loaded
 
-#r2 map mean
+    for sub, films in all_maps.items():
+        all_loaded = [(dir_name, image.load_img(file_path)) for (dir_name, file_path) in films]
+        all_maps[sub] = all_loaded
 
-# for sub, films in all_maps.items():
-    # save = os.path.join(out_directory, str(sub)+'.jpg')
-    # nifti = [nifti_files for (film_name, nifti_files) in films]
-    # mean_r2_map = mean_img(nifti)
-    # plot_stat_map(mean_r2_map, threshold = 0.03, output_file=save)
+    #plot
+    for key, data in all_data.items(): 
+        plot_train_val_data(key, 'films', data, "loss")
+        plot_train_val_data(key, 'films', data, "r2_max")
+        plot_train_val_data(key, 'films', data, "r2_mean")
+
+    #r2 map mean
+    for sub, films in all_maps.items():
+        save = os.path.join(out_directory, str(sub)+'.jpg')
+        nifti = [nifti_files for (film_name, nifti_files) in films]
+        mean_r2_map = mean_img(nifti)
+        plot_stat_map(mean_r2_map, threshold = 0.03, output_file=save)
 
 #BEST ROI ------------------------------------------------------------------
-df = pd.read_csv(ROI_info, sep=';', index_col=0)
-n = 8
-all_index = []
-for sub, films_data in all_data.items():
-    for (film, data) in films_data:
-        r2_by_ROI = data['r2']
-        best_index = np.flip(np.argsort(r2_by_ROI))[:n]
-        best_index += 1
-        all_index.extend(list(best_index))
-
-indexes = set(all_index)
-#print(indexes)
-labels_ROI = {}
-for index in indexes:
-    labels_ROI[index] = df['name'][index]
-
-for index, roi in labels_ROI.items():
-    pass
-    #print(index, roi)
-
-for sub, films_data in all_data.items():
-    for (film, data) in films_data:
-        r2_by_ROI = data['r2']
-        best_index = np.flip(np.argsort(r2_by_ROI))[:n]
-        best_index += 1
-        #print(best_index, sub, film)
+# df = pd.read_csv(ROI_info, sep=';', index_col=0)
+# n = 8
+# all_index = []
+# for sub, films_data in all_data.items():
+    # for (film, data) in films_data:
+        # r2_by_ROI = data['r2']
+        # best_index = np.flip(np.argsort(r2_by_ROI))[:n]
+        # best_index += 1
+        # all_index.extend(list(best_index))
+# 
+# indexes = set(all_index)
+# labels_ROI = {}
+# for index in indexes:
+    # labels_ROI[index] = df['name'][index]
+# 
+# for index, roi in labels_ROI.items():
+    # pass
+# 
+# for sub, films_data in all_data.items():
+    # for (film, data) in films_data:
+        # r2_by_ROI = data['r2']
+        # best_index = np.flip(np.argsort(r2_by_ROI))[:n]
+        # best_index += 1
 #--------------------------------------------------------------------------------------
+
+#previous visualisation code-(go below all test_mist_neuromod_data.py script)-------------------------------------------------------
+    #  ### Plot the loss figure
+    #     f = plt.figure(figsize=(20,40))
+
+    #     ax = plt.subplot(4,1,2)
+
+    #     plt.plot(state['train_loss'][1:])
+    #     plt.plot(state['val_loss'][1:])
+    #     plt.legend(['Train','Val'])
+    #     plt.title("loss evolution => Mean test R^2=${}, Max test R^2={}, for model {}, batchsize ={} and {} hidden neurons".format(r2model.mean(),r2model.max(), "sdn_1_conv", str(batchsize), fmrihidden))
+
+    #     ### Mean R2 evolution during training
+    #     ax = plt.subplot(4,1,3)
+
+    #     plt.plot(state['train_r2_mean'][1:])
+    #     plt.plot(state['val_r2_mean'][1:])
+    #     plt.legend(['Train','Val'])
+    #     plt.title("Mean R^2 evolution for model {}, batchsize ={} and {} hidden neurons".format("sdn_1_conv", str(batchsize), fmrihidden))
+
+    #     ### Max R2 evolution during training
+    #     ax = plt.subplot(4,1,4)
+
+    #     plt.plot(state['train_r2_max'][1:])
+    #     plt.plot(state['val_r2_max'][1:])
+    #     plt.legend(['Train','Val'])
+    #     plt.title("Max R^2 evolution for model {}, batchsize ={} and {} hidden neurons".format("sdn_1_conv", str(batchsize), fmrihidden))
+
+    #     ### R2 figure 
+    #     #r2_img = signals_to_img_labels(r2model.reshape(1,-1),mistroifile)
+
+    #     #ax = plt.subplot(4,1,1)
+
+    #     #plot_stat_map(r2_img,display_mode='z',cut_coords=8,figure=f,axes=ax)
+    #     #f.savefig(str_bestmodel_plot)
+    #     #r2_img.to_filename(str_bestmodel_nii)
+    #     plt.close()

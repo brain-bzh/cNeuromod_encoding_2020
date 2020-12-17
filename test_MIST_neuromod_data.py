@@ -30,7 +30,6 @@ stimuli_path = '/home/maelle/Database/cneuromod/movie10/stimuli' #'/home/brain/D
 path_parcellation = '/home/maelle/Database/movie10_parc'#'/home/brain/Data_Base/movie10_parc'
 all_subs = associate_stimuli_with_Parcellation(stimuli_path, path_parcellation)
 
-#Je veux lancer ce code par sujet, par film
 
 bourne = 'bourne_supremacy'
 wolf = 'wolf_of_wall_street'
@@ -57,7 +56,7 @@ nbepoch = 100
 outpath = "/home/maelle/Results/encoding_12_2020/batch_{}_nROI_{}".format(batchsize, nroi)
 create_dir_if_needed(outpath)
 
-for subject in [2]:
+for subject in subjects:
     for film in films:
 
         destdir = os.path.join(outpath, 'sub_{}'.format(subject), film)
@@ -152,7 +151,7 @@ for subject in [2]:
         test_loss = test(1,testloader,net,optimizer,mseloss=mseloss)
         print("Test Loss : {}".format(test_loss))
 
-        #6 - Visualisation
+        #6 - Save Model
 
         mistroifile = '/home/maelle/Database/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 
@@ -189,42 +188,7 @@ for subject in [2]:
                     'selected ROI': selected_ROI
                 }
 
-
-        ### Plot the loss figure
-        f = plt.figure(figsize=(20,40))
-
-        ax = plt.subplot(4,1,2)
-
-        plt.plot(state['train_loss'][1:])
-        plt.plot(state['val_loss'][1:])
-        plt.legend(['Train','Val'])
-        plt.title("loss evolution => Mean test R^2=${}, Max test R^2={}, for model {}, batchsize ={} and {} hidden neurons".format(r2model.mean(),r2model.max(), "sdn_1_conv", str(batchsize), fmrihidden))
-
-        ### Mean R2 evolution during training
-        ax = plt.subplot(4,1,3)
-
-        plt.plot(state['train_r2_mean'][1:])
-        plt.plot(state['val_r2_mean'][1:])
-        plt.legend(['Train','Val'])
-        plt.title("Mean R^2 evolution for model {}, batchsize ={} and {} hidden neurons".format("sdn_1_conv", str(batchsize), fmrihidden))
-
-        ### Max R2 evolution during training
-        ax = plt.subplot(4,1,4)
-
-        plt.plot(state['train_r2_max'][1:])
-        plt.plot(state['val_r2_max'][1:])
-        plt.legend(['Train','Val'])
-        plt.title("Max R^2 evolution for model {}, batchsize ={} and {} hidden neurons".format("sdn_1_conv", str(batchsize), fmrihidden))
-
-        ### R2 figure 
-        #r2_img = signals_to_img_labels(r2model.reshape(1,-1),mistroifile)
-
-        #ax = plt.subplot(4,1,1)
-
-        #plot_stat_map(r2_img,display_mode='z',cut_coords=8,figure=f,axes=ax)
-        #f.savefig(str_bestmodel_plot)
-        #r2_img.to_filename(str_bestmodel_nii)
-        plt.close()
-
+        ### Nifti file Save
+        r2_img = signals_to_img_labels(r2model.reshape(1,-1),mistroifile)
+        r2_img.to_filename(str_bestmodel_nii)
         save(state, str_bestmodel)
-        #7 - User Interface
