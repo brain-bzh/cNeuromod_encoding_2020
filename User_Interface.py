@@ -18,7 +18,7 @@ life = "life"
 hidden = "hidden_figures"
 
 films = [bourne, wolf, life, hidden]
-subjects = [0,1,2,3]
+subjects = [0,1,2,3,4]
 
 data_processing = {
     'tr' : 1.49,
@@ -28,15 +28,15 @@ data_processing = {
 }
 
 #model parameters
-allfmrihidden=[500, 1000, 1500, 2000]
-models = [encod.SoundNetEncoding_conv, encod.SoundNetEncoding_conv_2, encod.SoundNetEncoding_conv_3]
+allfmrihidden=[1000]
+models = [encod.SoundNetEncoding_conv]
 kernel_sizes=[1]
 
 training_hyperparameters = {
     'gpu':False,
     'batchsize':30,
-    'lr':0.01,
-    'nbepoch': 100,
+    'lr':1,
+    'nbepoch': 500,
     'train_percent':0.6,
     'test_percent':0.2,
     'val_percent':0.2,
@@ -46,20 +46,20 @@ training_hyperparameters = {
 
 #paths
 stimuli_path = '/home/maelle/Database/cneuromod/movie10/stimuli' #'/home/brain/Data_Base/cneuromod/movie10/stimuli' 
-path_parcellation = '/home/maelle/Database/movie10_parc' #'/home/brain/Data_Base/movie10_parc'
+path_parcellation = '/home/maelle/Database/12_2020_parcellation/MIST_ROI' #/home/maelle/Database/movie10_parc';'/home/brain/Data_Base/movie10_parc'
 all_subs_files = associate_stimuli_with_Parcellation(stimuli_path, path_parcellation)
-outpath = "/home/maelle/Results/tests_12_2020"
+outpath = "/home/maelle/Results/tests_12_2020_new_embeddings"
 create_dir_if_needed(outpath)
 
 #--------------------------TRAINING LOOP-------------------------------------------------------------------
 if __name__ == "__main__":
     for subject in subjects:
-        outpath = os.path.join(outpath, 'subject_'+str(subject))
-        create_dir_if_needed(outpath)
+        outpath_sub = os.path.join(outpath, 'subject_'+str(subject))
+        create_dir_if_needed(outpath_sub)
 
         for film in films:
-            outpath = os.path.join(outpath, film)
-            create_dir_if_needed(outpath)
+            outpath_film = os.path.join(outpath_sub, film)
+            create_dir_if_needed(outpath_film)
 
             for model in models:
                 for fmrihidden in allfmrihidden:
@@ -75,7 +75,8 @@ if __name__ == "__main__":
                         training_hyperparameters['fmrihidden'] = fmrihidden
                         training_hyperparameters['kernel_size'] = kernel_size
 
-                        main_model_training(outpath, data_selection, data_processing, training_hyperparameters)
+                        main_model_training(outpath_film, data_selection, data_processing, training_hyperparameters)
+            
 
                 
 

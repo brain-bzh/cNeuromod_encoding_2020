@@ -74,7 +74,7 @@ def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
         y = y.double()
         if gpu:
             y = y.cuda()
-        print(f"y_real shape : ", y.shape, "and y_predicted shape : ", predicted_y.shape)         # both must have the same shape
+        #print(f"y_real shape : ", y.shape, "and y_predicted shape : ", predicted_y.shape)         # both must have the same shape
         loss=delta*mseloss(predicted_y,y)/batch_size
         loss.backward()
         optimizer.step()

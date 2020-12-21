@@ -100,7 +100,7 @@ class SoundNetEncoding_conv(nn.Module):
                 print("Finetuning : backbone will be optimized")
 
         self.encoding_fmri = nn.Sequential(                
-                nn.Conv2d(1024,self.nroi,kernel_size=(1,kernel_size)),
+                nn.Conv1d(1024,self.nroi,kernel_size=(kernel_size,1), padding=(kernel_size-1,0)),
                 #nn.ReLU(inplace=True),
                 #nn.Conv2d(self.fmrihidden,self.nroi,kernel_size=(1,1)),
 

@@ -42,6 +42,9 @@ def fetchMRI(videofile,fmrilist):
 
         else : 
             return [(videofile, mriMatchs[1]), (videofile, mriMatchs[0])]
+    elif len(mriMatchs) == 0 : 
+        print('no parcellation was found for {} as {}'.format(filename, cur_name))
+        return []
     else :
         return [(videofile, mriMatchs[0])]
 

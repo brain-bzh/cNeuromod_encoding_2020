@@ -50,7 +50,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
     mseloss = training_hyperparameters['mseloss']
     early_stopping = training_hyperparameters['early_stopping']
 
-    outfile_name = str(model)+'_'+str(fmrihidden)+'_ks_'+str(kernel_size)
+    outfile_name = str(model.__name__)+'_'+str(fmrihidden)+'_ks_'+str(kernel_size)
     destdir = outpath
 
     #-------------------------------------------------------------
