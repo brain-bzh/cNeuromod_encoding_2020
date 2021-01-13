@@ -32,6 +32,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
     subject = data_selection['subject']
     film = data_selection['film']
 
+    scale = data_processing['scale']
     tr = data_processing['tr']
     sr = data_processing['sr']
     selected_ROI =data_processing['selected_ROI']
@@ -50,7 +51,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
     mseloss = training_hyperparameters['mseloss']
     early_stopping = training_hyperparameters['early_stopping']
 
-    outfile_name = str(model.__name__)+'_'+str(fmrihidden)+'_ks_'+str(kernel_size)
+    outfile_name = str(scale)+'_'+str(model.__name__)+'_'+str(fmrihidden)+'_ks_'+str(kernel_size)+'_lr_'+str(lr)+'_'
     destdir = outpath
 
     #-------------------------------------------------------------
@@ -94,7 +95,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
 
     #|--------------------------------------------------------------------------------------------------------------------------------------
     ### Model Setup
-    net = encod.SoundNetEncoding_conv(pytorch_param_path='./sound8.pth',fmrihidden=fmrihidden,nroi=nroi, kernel_size=kernel_size)
+    net = encod.SoundNetEncoding_conv(pytorch_param_path='./sound8.pth',fmrihidden=fmrihidden,out_size=nroi, kernel_size=kernel_size)
     if gpu : 
         net.to("cuda")
     else:
@@ -182,6 +183,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
             }
 
     ### Nifti file Save
-    r2_img = signals_to_img_labels(r2model.reshape(1,-1),mistroifile)
-    r2_img.to_filename(str_bestmodel_nii)
+    if scale == 'roi':
+        r2_img = signals_to_img_labels(r2model.reshape(1,-1),mistroifile)
+        r2_img.to_filename(str_bestmodel_nii)
     save(state, str_bestmodel)

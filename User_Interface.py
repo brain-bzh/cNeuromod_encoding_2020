@@ -21,10 +21,11 @@ films = [bourne, wolf, life, hidden]
 subjects = [0,1,2,3,4]
 
 data_processing = {
+    'scale':'voxel',
     'tr' : 1.49,
     'sr' : 22050,
     'selected_ROI':None,
-    'nroi': 210
+    'nroi': 556
 }
 
 #model parameters
@@ -35,7 +36,7 @@ kernel_sizes=[1]
 training_hyperparameters = {
     'gpu':False,
     'batchsize':30,
-    'lr':1,
+    'lr':0.01,
     'nbepoch': 500,
     'train_percent':0.6,
     'test_percent':0.2,
@@ -46,9 +47,9 @@ training_hyperparameters = {
 
 #paths
 stimuli_path = '/home/maelle/Database/cneuromod/movie10/stimuli' #'/home/brain/Data_Base/cneuromod/movie10/stimuli' 
-path_parcellation = '/home/maelle/Database/12_2020_parcellation/MIST_ROI' #/home/maelle/Database/movie10_parc';'/home/brain/Data_Base/movie10_parc'
+path_parcellation = '/home/maelle/Database/12_2020_parcellation/auditory_Voxels/NORMALIZED' #/home/maelle/Database/movie10_parc';'/home/brain/Data_Base/movie10_parc'
 all_subs_files = associate_stimuli_with_Parcellation(stimuli_path, path_parcellation)
-outpath = "/home/maelle/Results/tests_12_2020_new_embeddings"
+outpath = "/home/maelle/Results/tests2_01_2020_voxels_embeddings_12_2020"
 create_dir_if_needed(outpath)
 
 #--------------------------TRAINING LOOP-------------------------------------------------------------------
