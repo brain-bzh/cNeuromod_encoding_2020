@@ -14,9 +14,11 @@ from nilearn.image import load_img, mean_img
 from matplotlib import pyplot as plt 
 
 
-ROI_info = '/home/maelle/Database/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
-data_path = '/home/maelle/Results/encoding_12_2020/batch_30_nROI_7'
-out_directory = '/home/maelle/Results/encoding_12_2020/analysis/batch_30_nROI_7'
+roi_path = '/home/maelle/Database/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
+data_path = '/home/maelle/Results/202012_test_seqLen_embed2019'
+target_dir = 'batch_30'
+target_path = os.path.join(data_path, target_dir)
+out_directory = os.path.join(data_path, 'analysis', target_dir)
 create_dir_if_needed(out_directory)
 
 def plot_train_val_data(criterion, label, data, measure, colors = ['b', 'g', 'm', 'r']) : 
@@ -63,10 +65,77 @@ def construct_data_dico(criterion, extension, data_path):
                 all_data[key].append((value, file_path))
     return all_data
 
+#BEST ROI ------------------------------------------------------------------
+def top_data(data, criteria, n=5):
+    selected_values = data[criteria]
+    best_values = np.flip(np.sort(selected_values))[:n]
+    best_values = np.reshape(best_values, (-1,1))
+
+    best_index = np.flip(np.argsort(selected_values))[:n]
+    best_index = np.reshape(best_index, (-1,1))
+
+    best_results = np.concatenate((best_index, best_values), axis=1)
+    return best_results
+
+def plot_ROI(outpath, all_data, nROI_shown=5):
+    roi_info = roi_path
+    df_roi = pd.read_csv(roi_info, sep=';', index_col=0)
+
+    #search for roi/indexes with best r2 values
+    all_top_index = []
+    all_index = []
+    for sub, films_data in all_data.items():
+        for (film, data) in films_data:
+            result = top_data(data, criteria='r2', n=nROI_shown)
+            top_index = result[:,0]+1
+            all_top_index.append(list(top_index))
+            all_index.extend(list(top_index))
+    
+    #create a dataframe with info for each roi/index
+    indexes = set(all_index)
+    stat_ROI = pd.DataFrame()
+    for index in indexes:
+        label = df_roi['name'][index]
+        index_count = [0]*nROI_shown
+        for top_index in all_top_index:
+            try:
+                here = top_index.index(index)
+                index_count[here] += 1
+            except ValueError:
+                pass    
+        entry = pd.Series({'label':label, 'count':index_count}, name=int(index))
+        stat_ROI = stat_ROI.append(entry)
+
+    #actual plot
+    ind = np.arange(nROI_shown)
+    bottom = [0]*nROI_shown
+    plot_legends = []
+    label_legends = []
+
+    for roi, data in stat_ROI.iterrows():
+
+        plot = plt.bar(ind, data['count'], bottom=bottom, tick_label = data['count'])
+        plot_legends.append(plot[0])
+        label_legends.append(data['label'])
+        bottom = [i+j for i,j in zip(bottom, data['count'])]
+
+    plt.xticks(ind, [str(num+1)+' rank' for num in ind])
+    plt.yticks(np.arange(0,max(bottom)+2,2))
+    plt.legend(plot_legends, label_legends)
+
+    save_path = os.path.join(outpath, 'best_roi_rank_plot.jpg')
+    print(save_path)
+    plt.savefig(save_path)
+
+
+
+#--------------------------------------------------------------------------------------
+
+
 if __name__ == "__main__":
 
-    all_data = construct_data_dico('sub', '.pt', data_path)
-    all_maps = construct_data_dico('film', '.gz', data_path)
+    all_data = construct_data_dico('sub', '.pt', target_path)
+    all_maps = construct_data_dico('film', '.gz', target_path)
 
     for sub, films in all_data.items():
         all_loaded = [(dir_name, load(file_path)) for (dir_name, file_path) in films]
@@ -76,44 +145,22 @@ if __name__ == "__main__":
         all_loaded = [(dir_name, image.load_img(file_path)) for (dir_name, file_path) in films]
         all_maps[sub] = all_loaded
 
-    #plot
-    for key, data in all_data.items(): 
-        plot_train_val_data(key, 'films', data, "loss")
-        plot_train_val_data(key, 'films', data, "r2_max")
-        plot_train_val_data(key, 'films', data, "r2_mean")
+    #plot best roi
+    plot_ROI(out_directory, all_data, nROI_shown=4)
 
-    #r2 map mean
-    for sub, films in all_maps.items():
-        save = os.path.join(out_directory, str(sub)+'.jpg')
-        nifti = [nifti_files for (film_name, nifti_files) in films]
-        mean_r2_map = mean_img(nifti)
-        plot_stat_map(mean_r2_map, threshold = 0.03, output_file=save)
+    # #plot
+    # for key, data in all_data.items(): 
+    #     plot_train_val_data(key, 'films', data, "loss")
+    #     plot_train_val_data(key, 'films', data, "r2_max")
+    #     plot_train_val_data(key, 'films', data, "r2_mean")
 
-#BEST ROI ------------------------------------------------------------------
-# df = pd.read_csv(ROI_info, sep=';', index_col=0)
-# n = 8
-# all_index = []
-# for sub, films_data in all_data.items():
-    # for (film, data) in films_data:
-        # r2_by_ROI = data['r2']
-        # best_index = np.flip(np.argsort(r2_by_ROI))[:n]
-        # best_index += 1
-        # all_index.extend(list(best_index))
-# 
-# indexes = set(all_index)
-# labels_ROI = {}
-# for index in indexes:
-    # labels_ROI[index] = df['name'][index]
-# 
-# for index, roi in labels_ROI.items():
-    # pass
-# 
-# for sub, films_data in all_data.items():
-    # for (film, data) in films_data:
-        # r2_by_ROI = data['r2']
-        # best_index = np.flip(np.argsort(r2_by_ROI))[:n]
-        # best_index += 1
-#--------------------------------------------------------------------------------------
+    # #r2 map mean
+    # for sub, films in all_maps.items():
+    #     save = os.path.join(out_directory, str(sub)+'.jpg')
+    #     nifti = [nifti_files for (film_name, nifti_files) in films]
+    #     mean_r2_map = mean_img(nifti)
+    #     plot_stat_map(mean_r2_map, threshold = 0.03, output_file=save)
+
 
 #previous visualisation code-(go below all test_mist_neuromod_data.py script)-------------------------------------------------------
     #  ### Plot the loss figure
