@@ -50,9 +50,9 @@ training_hyperparameters = {
 
 #paths
 stimuli_path = '/home/maelle/Database/cneuromod/movie10/stimuli' #'/home/brain/Data_Base/cneuromod/movie10/stimuli' 
-path_parcellation = '/home/maelle/Database/12_2020_parcellation/auditory_Voxels/NORMALIZED' #/home/maelle/Database/movie10_parc';'/home/brain/Data_Base/movie10_parc'
+path_parcellation = '/home/maelle/Database/12_2020_parcellation/auditory_Voxels/20210115_NORMALIZED' #/home/maelle/Database/movie10_parc';'/home/brain/Data_Base/movie10_parc'
 all_subs_files = associate_stimuli_with_Parcellation(stimuli_path, path_parcellation)
-outpath = "/home/maelle/Results/"+dt_string+"_tests_voxels_embed2020"
+outpath = "/home/maelle/Results/"+dt_string+"_tests_voxelsNorm_embed2020"
 create_dir_if_needed(outpath)
 
 #--------------------------TRAINING LOOP-------------------------------------------------------------------
