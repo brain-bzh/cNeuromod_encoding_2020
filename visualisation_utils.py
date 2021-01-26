@@ -10,6 +10,7 @@ from nilearn import image, plotting
 from nilearn.plotting import plot_stat_map
 from nilearn.regions import signals_to_img_labels
 from nilearn.image import load_img, mean_img
+from nilearn.input_data import NiftiMasker
 
 from matplotlib import pyplot as plt 
 
@@ -21,7 +22,7 @@ from matplotlib import pyplot as plt
 # out_directory = os.path.join(data_path, 'analysis', target_dir)
 
 roi_path = '/home/maelle/Database/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
-datapath = '/home/maelle/Results/202101_tests_kernels_embed2019'
+datapath = '/home/maelle/Results/202101_tests_voxelsNorm_embed2020'
 out_directory = os.path.join(datapath, 'analysis')
 create_dir_if_needed(out_directory)
 
@@ -151,7 +152,9 @@ def plot_ROI(outpath, all_data, nROI_shown=5):
 def plot_train_val_data(criterion, label, data, measure, colors = ['b', 'g', 'm', 'r']) : 
     f = plt.figure()
     legends = []
-    for color, (key, data_dict) in zip(colors, data):
+    for color, test in zip(colors, data):
+        key = test[0]
+        data_dict = test[1]
         plt.plot(data_dict['train_'+str(measure)], color+'-')
         plt.plot(data_dict['val_'+str(measure)], color+'--')
         legends.append(key+'_Train')
@@ -162,11 +165,13 @@ def plot_train_val_data(criterion, label, data, measure, colors = ['b', 'g', 'm'
     f.savefig(os.path.join(out_directory, 'all_{}_{}_in_{}.jpg'.format(label, measure, criterion)))
     plt.close()
 
-def one_train_plot(criterion, label, data, measure, colors = ['b', 'g', 'm', 'r']) : 
-    f = plt.figure()
+def one_train_plot(criterion, data, measure, colors = ['b', 'g', 'm', 'r']) : 
     legends = []
-    print(len(data))
-    for color, (key, data_dict) in zip(colors, data):
+    print(f'data_', len(data))
+    for color, test in zip(colors, data):
+        key = test[0]
+        data_dict = test[1]
+        print(f'test_', len(test))
         plt.plot(data_dict['train_'+str(measure)], color+'-')
         plt.plot(data_dict['val_'+str(measure)], color+'--')
         legends.append(key+'_Train')
@@ -174,30 +179,23 @@ def one_train_plot(criterion, label, data, measure, colors = ['b', 'g', 'm', 'r'
 
     plt.legend(legends, loc='upper right')
     plt.title(str(measure)+' in '+str(criterion))
-    return f
 
 def multiples_train_plots(criteria, data, measures, out_directory):
-    f = plt.figure(figsize=(20,40))
-
-    for i, measure in enumerate(measures):
-        for j, film in enumerate(data) : 
-            print(len(film))
-            sub_name = film[0]
-            # (target, target_value) = film[1]
-            # print(target, target_value)
-            # #---------to correct in script----------------------------------
-            # key = target+'_'+str(target_value)
-            # sub_data = (key, sub_crit[1][0])
-            # #------------------------------------------
-            # ax = plt.subplot(len(data),len(measures),i+j+1)
-            # one_train_plot(sub_name, target, sub_data, measure)
-
-    f.savefig(os.path.join(out_directory, 'all_{}_data_in_{}.jpg'.format(target, criteria)))
-    plt.close()
-
+    f = plt.figure(figsize=(20*len(measures),10*len(data)))
+    for i, film in enumerate(data) : 
+        sub_name = film[0]
+        target_name = film[1][1][0]
+        #---------to correct in script----------------------------------
+        sub_data = [(target[0]+'_'+str(target[1]), dico) for (dico, target) in film[1:]]
+        #------------------------------------------
+        for j, measure in enumerate(measures):
+            ax = plt.subplot(len(data),len(measures),len(measures)*i+(j+1))
+            one_train_plot(sub_name, sub_data, measure)
+    f.savefig(os.path.join(out_directory, 'all_{}_data_in_{}.jpg'.format(target_name, criteria)))
 
 if __name__ == "__main__":
     target_path = out_directory
+    auditorymask='STG_middle.nii.gz'
 
     all_data = construct_data_dico(data_path=datapath, extension='.pt', criterion='sub', target='ks')
     #all_maps = construct_data_dico('film', '.gz', target_path)
@@ -206,10 +204,40 @@ if __name__ == "__main__":
         all_loaded = [(dir_name, load(file_path, map_location=device('cpu')), target_data) for (dir_name, file_path, target_data) in films]
         all_data[sub] = all_loaded
 
-    all_data = subdivise_dict(all_data)
-    for key, value in all_data.items():
-        subject = key
-        multiples_train_plots(subject, value, ["loss", "r2_max", "r2_mean"], out_directory)
+        for key, value in all_data.items():
+            for film in value:
+                str_target = film[2][0]+'_'+str(film[2][1])
+                film_name = film[0]
+                training_data = film[1]
+
+                title = 'r2_map_for_{}_{}_{}.nii.gz'.format(str_target, film_name, key)
+                map_path = os.path.join(out_directory, title)
+
+                mymasker = NiftiMasker(mask_img=auditorymask,standardize=False,detrend=False,t_r=1.49,smoothing_fwhm=8)
+                mymasker.fit()
+
+                r2_img = mymasker.inverse_transform(training_data['r2'].reshape(1,-1))
+                r2_img.to_filename(map_path)
+                #plot_stat_map(r2_img, threshold = 0.00, output_file=map_path)
+
+
+
+    #all_data = subdivise_dict(all_data)
+
+    # measures = ["loss", "r2_max", "r2_mean"]
+    # for subject, data in all_data.items():
+    #     multiples_train_plots(subject, data, measures, out_directory)
+        # measures = ["loss", "r2_max", "r2_mean"]
+        # for i, film in enumerate(data) : 
+        #         sub_name = film[0]
+        #         target_name = film[1][1][0]
+        #         #---------to correct in script----------------------------------
+        #         sub_data = [(target[0]+'_'+str(target[1]), dico) for (dico, target) in film[1:]]
+        #         #------------------------------------------
+        #         for j, measure in enumerate(measures):
+        #             plot_train_val_data(subject, sub_name, sub_data, measure)    
+
+
 
     # for sub, films in all_maps.items():
     #     all_loaded = [(dir_name, image.load_img(file_path)) for (dir_name, file_path) in films]
