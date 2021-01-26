@@ -2,9 +2,9 @@ import os
 import numpy as np
 import pandas as pd
 import pickle
-from torch import load
+from torch import load, device
 
-from files_utils import create_dir_if_needed
+from files_utils import create_dir_if_needed, print_dict, extract_value_from_string
 
 from nilearn import image, plotting
 from nilearn.plotting import plot_stat_map
@@ -21,52 +21,17 @@ from matplotlib import pyplot as plt
 # out_directory = os.path.join(data_path, 'analysis', target_dir)
 
 roi_path = '/home/maelle/Database/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
-datapath = '/home/maelle/Results/202101_tests_kernels_embed2019/subject_0/bourne_supremacy'
+datapath = '/home/maelle/Results/202101_tests_kernels_embed2019'
 out_directory = os.path.join(datapath, 'analysis')
 create_dir_if_needed(out_directory)
 
+#--prep data---------------------------------------------------------------
 
-def one_train_plot(criterion, label, data, measure, colors = ['b', 'g', 'm', 'r']) : 
-    f = plt.figure()
-    legends = []
-    for color, (key, data_dict) in zip(colors, data):
-        plt.plot(data_dict['train_'+str(measure)], color+'-')
-        plt.plot(data_dict['val_'+str(measure)], color+'--')
-        legends.append(key+'_Train')
-        legends.append(key+'_Val')
-
-    plt.legend(legends, loc='upper right')
-    plt.title(str(measure)+' in '+str(criterion))
-    f.savefig(os.path.join(out_directory, 'all_{}_{}_in_{}.jpg'.format(label, measure, criterion)))
-    plt.close()
-
-def multiples_train_plots(data):
-    f = plt.figures()
-
-
-
-#----------------------------------------------------------------------
-
-def plot_train_val_data(criterion, label, data, measure, colors = ['b', 'g', 'm', 'r']) : 
-    f = plt.figure()
-    legends = []
-    for color, (key, data_dict) in zip(colors, data):
-        plt.plot(data_dict['train_'+str(measure)], color+'-')
-        plt.plot(data_dict['val_'+str(measure)], color+'--')
-        legends.append(key+'_Train')
-        legends.append(key+'_Val')
-
-    plt.legend(legends, loc='upper right')
-    plt.title(str(measure)+' in '+str(criterion))
-    f.savefig(os.path.join(out_directory, 'all_{}_{}_in_{}.jpg'.format(label, measure, criterion)))
-    plt.close()
-
-def construct_data_dico(criterion, extension, data_path):
+def construct_data_dico(data_path, extension, criterion='sub', target=None):
     all_data = {}
     key_list = []
     for path, dirs, files in os.walk(data_path):
         for file in files:
-            
             dir_name = os.path.basename(path)
             file_path = os.path.join(path, file)
             name, ext = os.path.splitext(file)
@@ -74,7 +39,15 @@ def construct_data_dico(criterion, extension, data_path):
             sub = 'none'
             index = path.find('sub')
             if index != -1 :
-                sub = path[index:index+5]
+                sub = path[index:index+4]
+
+            if target != None:
+                index = name.find(target)
+                if index != -1:
+                    i = index+3 
+                    target_value = extract_value_from_string(string=name, start_index = i)
+            else :
+                target_value = None
 
             if criterion == 'sub' :
                 key = sub
@@ -88,10 +61,28 @@ def construct_data_dico(criterion, extension, data_path):
                 key_list.append(key)
 
             if ext == extension:
-                all_data[key].append((value, file_path))
-
-    print(all_data)
+                all_data[key].append((value, file_path, (target, target_value)))
     return all_data
+
+def subdivise_dict(dico, start_pt = 0):
+    for key, value in dico.items():
+        start = value[0][start_pt]
+        sub_keys = [start]
+        for (sub_key, _, _) in value:
+            if sub_key != start:
+                sub_keys.append(sub_key)
+                start = sub_key
+
+        subdivisions = []
+        for sub_key in sub_keys:
+            subdivision = [sub_key]
+            if start_pt == 0:
+                subdivision.extend([(b,c) for (a,b,c) in value if a == sub_key])
+            elif start_pt == 1:
+                subdivision.extend([(a,c) for (a,b,c) in value if b == sub_key])
+            subdivisions.append(subdivision)
+        dico[key] = subdivisions
+    return dico
 
 #BEST ROI ------------------------------------------------------------------
 def top_data(data, criteria, n=5):
@@ -156,22 +147,73 @@ def plot_ROI(outpath, all_data, nROI_shown=5):
     print(save_path)
     plt.savefig(save_path)
 
-#--------------------------------------------------------------------------------------
+#-multiple training plot-------------------------------------------------------------------------
+def plot_train_val_data(criterion, label, data, measure, colors = ['b', 'g', 'm', 'r']) : 
+    f = plt.figure()
+    legends = []
+    for color, (key, data_dict) in zip(colors, data):
+        plt.plot(data_dict['train_'+str(measure)], color+'-')
+        plt.plot(data_dict['val_'+str(measure)], color+'--')
+        legends.append(key+'_Train')
+        legends.append(key+'_Val')
+
+    plt.legend(legends, loc='upper right')
+    plt.title(str(measure)+' in '+str(criterion))
+    f.savefig(os.path.join(out_directory, 'all_{}_{}_in_{}.jpg'.format(label, measure, criterion)))
+    plt.close()
+
+def one_train_plot(criterion, label, data, measure, colors = ['b', 'g', 'm', 'r']) : 
+    f = plt.figure()
+    legends = []
+    print(len(data))
+    for color, (key, data_dict) in zip(colors, data):
+        plt.plot(data_dict['train_'+str(measure)], color+'-')
+        plt.plot(data_dict['val_'+str(measure)], color+'--')
+        legends.append(key+'_Train')
+        legends.append(key+'_Val')
+
+    plt.legend(legends, loc='upper right')
+    plt.title(str(measure)+' in '+str(criterion))
+    return f
+
+def multiples_train_plots(criteria, data, measures, out_directory):
+    f = plt.figure(figsize=(20,40))
+
+    for i, measure in enumerate(measures):
+        for j, film in enumerate(data) : 
+            print(len(film))
+            sub_name = film[0]
+            # (target, target_value) = film[1]
+            # print(target, target_value)
+            # #---------to correct in script----------------------------------
+            # key = target+'_'+str(target_value)
+            # sub_data = (key, sub_crit[1][0])
+            # #------------------------------------------
+            # ax = plt.subplot(len(data),len(measures),i+j+1)
+            # one_train_plot(sub_name, target, sub_data, measure)
+
+    f.savefig(os.path.join(out_directory, 'all_{}_data_in_{}.jpg'.format(target, criteria)))
+    plt.close()
 
 
 if __name__ == "__main__":
     target_path = out_directory
 
-    all_data = construct_data_dico('sub', '.pt', target_path)
-    all_maps = construct_data_dico('film', '.gz', target_path)
+    all_data = construct_data_dico(data_path=datapath, extension='.pt', criterion='sub', target='ks')
+    #all_maps = construct_data_dico('film', '.gz', target_path)
 
     for sub, films in all_data.items():
-        all_loaded = [(dir_name, load(file_path)) for (dir_name, file_path) in films]
+        all_loaded = [(dir_name, load(file_path, map_location=device('cpu')), target_data) for (dir_name, file_path, target_data) in films]
         all_data[sub] = all_loaded
 
-    for sub, films in all_maps.items():
-        all_loaded = [(dir_name, image.load_img(file_path)) for (dir_name, file_path) in films]
-        all_maps[sub] = all_loaded
+    all_data = subdivise_dict(all_data)
+    for key, value in all_data.items():
+        subject = key
+        multiples_train_plots(subject, value, ["loss", "r2_max", "r2_mean"], out_directory)
+
+    # for sub, films in all_maps.items():
+    #     all_loaded = [(dir_name, image.load_img(file_path)) for (dir_name, file_path) in films]
+    #     all_maps[sub] = all_loaded
 
     #plot best roi
     #plot_ROI(out_directory, all_data, nROI_shown=5)

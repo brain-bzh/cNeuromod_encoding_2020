@@ -4,6 +4,23 @@ def create_dir_if_needed(path):
     if not os.path.isdir(path):
         os.makedirs(path)
 
+def print_dict(dico):
+    for key, value in dico.items():
+        print(key)    
+        for item in value :
+            print('      {}'.format(value))
+
+def extract_value_from_string(string, start_index):
+    temp=''
+    while True:
+        temp += string[start_index]
+        start_index+=1
+        try:
+            target_value = int(temp)
+        except ValueError:
+            break
+    return target_value
+
 def fetchMRI(videofile,fmrilist):
     ### isolate the mkv file (->filename) and the rest of the path (->videopath)
 
@@ -71,3 +88,32 @@ def associate_stimuli_with_Parcellation(stimuli_path, path_parcellation):
             all_subs[i] = sub_segments
 
     return all_subs
+
+def cNeuromod_subject_convention(path, name, zero_index = True):
+    num = int(name[-1])
+    if zero_index : 
+        num +=1
+
+    new_name = 'sub'+str(num)
+    if new_name != name:
+        prev_path = os.path.join(path, name)
+        new_path = os.path.join(path, new_name)
+        os.rename(prev_path, new_path)
+
+def rename_object(path, keyword_to_replace, rename_convention, objects=['dirs','files']):
+    for path, dirs, files in os.walk(path):
+        for key_object in objects :
+            if key_object == 'dirs':
+                key_list = dirs
+            elif key_object == 'files':
+                key_list = files
+            
+            for obj in key_list:
+                #print(obj)
+                if keyword_to_replace in obj:
+                    rename_convention(path, obj)
+
+if __name__ == "__main__":
+    path = "/home/maelle/Results"
+    rename_object(path, 'subject_', cNeuromod_subject_convention, objects=['dirs'])
+
