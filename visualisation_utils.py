@@ -22,7 +22,7 @@ from matplotlib import pyplot as plt
 # out_directory = os.path.join(data_path, 'analysis', target_dir)
 
 roi_path = '/home/maelle/Database/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
-datapath = '/home/maelle/Results/202101_tests_voxelsNorm_embed2020'
+datapath = '/home/maelle/Results/20210201_tests_roi_kernel_roiNorm_embed2020/subject_3'
 out_directory = os.path.join(datapath, 'analysis')
 create_dir_if_needed(out_directory)
 
@@ -63,6 +63,17 @@ def construct_data_dico(data_path, extension, criterion='sub', target=None):
 
             if ext == extension:
                 all_data[key].append((value, file_path, (target, target_value)))
+    return all_data
+
+def sort_by_target_value(our_data_dico):
+    for subject, films_files in our_data_dico.items():
+        sorted_index = sorted(set([target_value for (value, file_path, (target, target_value)) in films_files]))
+        sorted_list = sorted_index*4
+
+        for (value, file_path, (target, target_value)) in films_files:
+            index = sorted_list.index(target_value)
+            sorted_list[index] = (value, file_path, (target, target_value))
+        our_data_dico[subject] = sorted_list
     return all_data
 
 def subdivise_dict(dico, start_pt = 0):
@@ -145,7 +156,6 @@ def plot_ROI(outpath, all_data, nROI_shown=5):
     plt.legend(plot_legends, label_legends)
 
     save_path = os.path.join(outpath, 'best_roi_rank_plot.jpg')
-    print(save_path)
     plt.savefig(save_path)
 
 #-multiple training plot-------------------------------------------------------------------------
@@ -167,11 +177,11 @@ def plot_train_val_data(criterion, label, data, measure, colors = ['b', 'g', 'm'
 
 def one_train_plot(criterion, data, measure, colors = ['b', 'g', 'm', 'r']) : 
     legends = []
-    print(f'data_', len(data))
+    #print(f'data_', len(data))
     for color, test in zip(colors, data):
         key = test[0]
         data_dict = test[1]
-        print(f'test_', len(test))
+        #print(f'test_', len(test))
         plt.plot(data_dict['train_'+str(measure)], color+'-')
         plt.plot(data_dict['val_'+str(measure)], color+'--')
         legends.append(key+'_Train')
@@ -181,7 +191,7 @@ def one_train_plot(criterion, data, measure, colors = ['b', 'g', 'm', 'r']) :
     plt.title(str(measure)+' in '+str(criterion))
 
 def multiples_train_plots(criteria, data, measures, out_directory):
-    f = plt.figure(figsize=(20*len(measures),10*len(data)))
+    f = plt.figure(figsize=(15*len(measures),15*len(data)))
     for i, film in enumerate(data) : 
         sub_name = film[0]
         target_name = film[1][1][0]
@@ -199,35 +209,17 @@ if __name__ == "__main__":
 
     all_data = construct_data_dico(data_path=datapath, extension='.pt', criterion='sub', target='ks')
     #all_maps = construct_data_dico('film', '.gz', target_path)
-
+    all_data = sort_by_target_value(all_data)
     for sub, films in all_data.items():
         all_loaded = [(dir_name, load(file_path, map_location=device('cpu')), target_data) for (dir_name, file_path, target_data) in films]
         all_data[sub] = all_loaded
 
-        for key, value in all_data.items():
-            for film in value:
-                str_target = film[2][0]+'_'+str(film[2][1])
-                film_name = film[0]
-                training_data = film[1]
+    all_data = subdivise_dict(all_data)
 
-                title = 'r2_map_for_{}_{}_{}.nii.gz'.format(str_target, film_name, key)
-                map_path = os.path.join(out_directory, title)
+    measures = ["loss", "r2_max", "r2_mean"]
+    for subject, data in all_data.items():
+        multiples_train_plots(subject, data, measures, out_directory)
 
-                mymasker = NiftiMasker(mask_img=auditorymask,standardize=False,detrend=False,t_r=1.49,smoothing_fwhm=8)
-                mymasker.fit()
-
-                r2_img = mymasker.inverse_transform(training_data['r2'].reshape(1,-1))
-                r2_img.to_filename(map_path)
-                #plot_stat_map(r2_img, threshold = 0.00, output_file=map_path)
-
-
-
-    #all_data = subdivise_dict(all_data)
-
-    # measures = ["loss", "r2_max", "r2_mean"]
-    # for subject, data in all_data.items():
-    #     multiples_train_plots(subject, data, measures, out_directory)
-        # measures = ["loss", "r2_max", "r2_mean"]
         # for i, film in enumerate(data) : 
         #         sub_name = film[0]
         #         target_name = film[1][1][0]
@@ -237,6 +229,23 @@ if __name__ == "__main__":
         #         for j, measure in enumerate(measures):
         #             plot_train_val_data(subject, sub_name, sub_data, measure)    
 
+
+
+        # for key, value in all_data.items():
+        #     for film in value:
+        #         str_target = film[2][0]+'_'+str(film[2][1])
+        #         film_name = film[0]
+        #         training_data = film[1]
+
+        #         title = 'r2_map_for_{}_{}_{}.nii.gz'.format(str_target, film_name, key)
+        #         map_path = os.path.join(out_directory, title)
+
+        #         mymasker = NiftiMasker(mask_img=auditorymask,standardize=False,detrend=False,t_r=1.49,smoothing_fwhm=8)
+        #         mymasker.fit()
+
+        #         r2_img = mymasker.inverse_transform(training_data['r2'].reshape(1,-1))
+        #         r2_img.to_filename(map_path)
+                #plot_stat_map(r2_img, threshold = 0.00, output_file=map_path)
 
 
     # for sub, films in all_maps.items():

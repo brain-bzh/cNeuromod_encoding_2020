@@ -8,16 +8,16 @@ def print_dict(dico):
     for key, value in dico.items():
         print(key)    
         for item in value :
-            print('      {}'.format(value))
+            print('      {}'.format(item))
 
 def extract_value_from_string(string, start_index):
     temp=''
     while True:
-        temp += string[start_index]
-        start_index+=1
         try:
+            temp += string[start_index]
+            start_index+=1
             target_value = int(temp)
-        except ValueError:
+        except (IndexError, ValueError):
             break
     return target_value
 

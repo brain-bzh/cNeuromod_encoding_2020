@@ -49,7 +49,10 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
     test_percent = training_hyperparameters['test_percent']
     val_percent = training_hyperparameters['val_percent']
     mseloss = training_hyperparameters['mseloss']
-    early_stopping = training_hyperparameters['early_stopping']
+    #early_stopping = training_hyperparameters['early_stopping']
+    #problem, that stop the training of any following test
+    #to look how to implement a more interactable early_stopping
+    early_stopping = EarlyStopping(patience=10, verbose=True,delta=1e-6)
 
     outfile_name = str(scale)+'_'+str(model.__name__)+'_'+str(fmrihidden)+'_ks_'+str(kernel_size)+'_lr_'+str(lr)+'_'
     destdir = outpath
@@ -92,7 +95,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
     trainloader = sample(loader[:train_len], k=train_len)
     valloader = sample(loader[train_len:train_len+val_len], k=val_len)
     testloader = sample(loader[train_len+val_len:train_len+val_len+test_len], k=test_len)
-
+    
     #|--------------------------------------------------------------------------------------------------------------------------------------
     ### Model Setup
     net = encod.SoundNetEncoding_conv(pytorch_param_path='./sound8.pth',fmrihidden=fmrihidden,out_size=nroi, kernel_size=kernel_size)
@@ -134,6 +137,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
             # and if it has, it will make a checkpoint of the current model
             r2_forEL = -(val_r2_max[-1])
             early_stopping(r2_forEL, net)
+
             if early_stopping.early_stop:
                 print("Early stopping")
                 break
@@ -183,7 +187,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
             }
 
     ### Nifti file Save
-    if scale == 'roi':
+    if scale == 'roi' and nroi == 210:
         r2_img = signals_to_img_labels(r2model.reshape(1,-1),mistroifile)
         r2_img.to_filename(str_bestmodel_nii)
     save(state, str_bestmodel)
