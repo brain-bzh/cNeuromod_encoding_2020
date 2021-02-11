@@ -4,14 +4,11 @@ from sklearn import preprocessing
 
 from files_utils import create_dir_if_needed
 
-path_parcellation = '/home/maelle/Database/12_2020_parcellation/auditory_Voxels'
-save_path = os.path.join(path_parcellation, '20210115_NORMALIZED')
+path_parcellation = '/home/maelle/Database/cNeuromod_Embeddings/embed_2020/MIST_ROI'
+save_path = '/home/maelle/Database/cNeuromod_Embeddings/embed_2020_norm/MIST_ROI'
 
 standardize = preprocessing.StandardScaler()
 for subject in os.listdir(path_parcellation):
-    if "NORMALIZED" in subject:
-        pass
-
     subject_path = os.path.join(path_parcellation, subject)
     save_sub_path = os.path.join(save_path, subject)
     create_dir_if_needed(save_sub_path)

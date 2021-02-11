@@ -26,6 +26,10 @@ from nilearn.regions import signals_to_img_labels
 from matplotlib import pyplot as plt 
 
 def main_model_training(outpath, data_selection, data_processing, training_hyperparameters):
+    checkpt_still_here = os.path.lexists('checkpoint.pt')
+    if checkpt_still_here : 
+        print('suppression of checkpoint file')
+        os.remove('checkpoint.pt')
 
     #define arguments
     all_subs_files = data_selection['all_data']
@@ -52,7 +56,6 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
     #early_stopping = training_hyperparameters['early_stopping']
     #problem, that stop the training of any following test
     #to look how to implement a more interactable early_stopping
-    early_stopping = EarlyStopping(patience=10, verbose=True,delta=1e-6)
 
     outfile_name = str(scale)+'_'+str(model.__name__)+'_'+str(fmrihidden)+'_ks_'+str(kernel_size)+'_lr_'+str(lr)+'_'
     destdir = outpath
@@ -95,7 +98,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
     trainloader = sample(loader[:train_len], k=train_len)
     valloader = sample(loader[train_len:train_len+val_len], k=val_len)
     testloader = sample(loader[train_len+val_len:train_len+val_len+test_len], k=test_len)
-    
+
     #|--------------------------------------------------------------------------------------------------------------------------------------
     ### Model Setup
     net = encod.SoundNetEncoding_conv(pytorch_param_path='./sound8.pth',fmrihidden=fmrihidden,out_size=nroi, kernel_size=kernel_size)
@@ -105,7 +108,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
         net.to("cpu")
 
     optimizer = optim.Adam(net.parameters(), lr = lr)
-
+    early_stopping = EarlyStopping(patience=10, verbose=True,delta=1e-3)
     enddate = datetime.now()
 
     #---------------------------------------------------------------------------------------------------------------------------------
@@ -124,6 +127,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
         for epoch in tqdm(range(nbepoch)):
             t_l, t_r2 = train(epoch,trainloader,net,optimizer,mseloss=mseloss, gpu=gpu)
             train_loss.append(t_l)
+            print(t_r2)
             train_r2_max.append(max(t_r2))
             train_r2_mean.append(np.mean(t_r2))
 
@@ -135,8 +139,9 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
 
             # early_stopping needs the R2 mean to check if it has increased, 
             # and if it has, it will make a checkpoint of the current model
-            r2_forEL = -(val_r2_max[-1])
-            early_stopping(r2_forEL, net)
+            
+            #r2_forEL = -(val_r2_max[-1])
+            early_stopping(t_l, net)
 
             if early_stopping.early_stop:
                 print("Early stopping")
@@ -177,9 +182,9 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
                 'val_r2_max' : val_r2_max,
                 'val_r2_mean' : val_r2_mean,
                 'test_loss' : test_loss,
-                'r2' : r2model,
-                'r2max' : r2model.max(),
-                'r2mean' : r2model.mean(),
+                'test_r2' : r2model,
+                'test_r2_max' : r2model.max(),
+                'test_r2_mean' : r2model.mean(),
                 'training_time' : enddate - startdate,
                 'nhidden' : fmrihidden,
                 'model' : net,
@@ -187,7 +192,12 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
             }
 
     ### Nifti file Save
-    if scale == 'roi' and nroi == 210:
+    if scale == 'MIST_ROI' and nroi == 210:
         r2_img = signals_to_img_labels(r2model.reshape(1,-1),mistroifile)
         r2_img.to_filename(str_bestmodel_nii)
     save(state, str_bestmodel)
+
+    checkpt_still_here = os.path.lexists('checkpoint.pt')
+    if checkpt_still_here : 
+        print('suppression of checkpoint file')
+        os.remove('checkpoint.pt')

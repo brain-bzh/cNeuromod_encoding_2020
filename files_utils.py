@@ -114,6 +114,6 @@ def rename_object(path, keyword_to_replace, rename_convention, objects=['dirs','
                     rename_convention(path, obj)
 
 if __name__ == "__main__":
-    path = "/home/maelle/Results"
+    path = "/home/maelle/Results/20210201_tests_kernel_voxel_Norm_embed2020"
     rename_object(path, 'subject_', cNeuromod_subject_convention, objects=['dirs'])
 

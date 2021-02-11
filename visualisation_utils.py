@@ -6,8 +6,8 @@ from torch import load, device
 
 from files_utils import create_dir_if_needed, print_dict, extract_value_from_string
 
-from nilearn import image, plotting
-from nilearn.plotting import plot_stat_map
+from nilearn import image, plotting, datasets, surface
+from nilearn.plotting import plot_stat_map, view_img, view_img_on_surf
 from nilearn.regions import signals_to_img_labels
 from nilearn.image import load_img, mean_img
 from nilearn.input_data import NiftiMasker
@@ -22,7 +22,7 @@ from matplotlib import pyplot as plt
 # out_directory = os.path.join(data_path, 'analysis', target_dir)
 
 roi_path = '/home/maelle/Database/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
-datapath = '/home/maelle/Results/20210201_tests_roi_kernel_roiNorm_embed2020/subject_3'
+datapath = '/home/maelle/Results/20210211_tests_kernel_MIST_ROI_embed_2020_norm/subject_0'
 out_directory = os.path.join(datapath, 'analysis')
 create_dir_if_needed(out_directory)
 
@@ -37,32 +37,33 @@ def construct_data_dico(data_path, extension, criterion='sub', target=None):
             file_path = os.path.join(path, file)
             name, ext = os.path.splitext(file)
 
-            sub = 'none'
-            index = path.find('sub')
-            if index != -1 :
-                sub = path[index:index+4]
-
-            if target != None:
-                index = name.find(target)
-                if index != -1:
-                    i = index+3 
-                    target_value = extract_value_from_string(string=name, start_index = i)
-            else :
-                target_value = None
-
-            if criterion == 'sub' :
-                key = sub
-                value = dir_name 
-            else :
-                key = dir_name
-                value = sub
-
-            if key not in key_list : 
-                all_data[key] = []
-                key_list.append(key)
-
             if ext == extension:
+                sub = 'none'
+                index = path.find('sub')
+                if index != -1 :
+                    sub = path[index:index+4]
+
+                if target != None:
+                    index = name.find(target)
+                    if index != -1:
+                        i = index+3 
+                        target_value = extract_value_from_string(string=name, start_index = i)
+                else :
+                    target_value = None
+
+                if criterion == 'sub' :
+                    key = sub
+                    value = dir_name 
+                else :
+                    key = dir_name
+                    value = sub
+
+                if key not in key_list : 
+                    all_data[key] = []
+                    key_list.append(key)
+
                 all_data[key].append((value, file_path, (target, target_value)))
+
     return all_data
 
 def sort_by_target_value(our_data_dico):
@@ -74,7 +75,7 @@ def sort_by_target_value(our_data_dico):
             index = sorted_list.index(target_value)
             sorted_list[index] = (value, file_path, (target, target_value))
         our_data_dico[subject] = sorted_list
-    return all_data
+    return our_data_dico
 
 def subdivise_dict(dico, start_pt = 0):
     for key, value in dico.items():
@@ -184,13 +185,20 @@ def one_train_plot(criterion, data, measure, colors = ['b', 'g', 'm', 'r']) :
         #print(f'test_', len(test))
         plt.plot(data_dict['train_'+str(measure)], color+'-')
         plt.plot(data_dict['val_'+str(measure)], color+'--')
+        #plt.text(14, 1, 'test_'+str(measure)+' : '+str(data_dict['test_'+str(measure)]))
         legends.append(key+'_Train')
         legends.append(key+'_Val')
 
     plt.legend(legends, loc='upper right')
     plt.title(str(measure)+' in '+str(criterion))
 
-def multiples_train_plots(criteria, data, measures, out_directory):
+def brain_3D_map(stat_img, title='', hemishpere='right', threshold=1.0, figure=None, output_file=None):
+    fsaverage = datasets.fetch_surf_fsaverage()
+    texture = surface.vol_to_surf(stat_img, fsaverage.pial_right)
+    plotting.plot_surf_stat_map(fsaverage.infl_right, texture, hemi=hemishpere,title=title, colorbar=True,threshold=threshold, bg_map=fsaverage.sulc_right,output_file=output_file, figure=figure)
+    #plus contour of ROI
+
+def multiples_plots(plot_function, criteria, data, measures, out_directory):
     f = plt.figure(figsize=(15*len(measures),15*len(data)))
     for i, film in enumerate(data) : 
         sub_name = film[0]
@@ -200,7 +208,8 @@ def multiples_train_plots(criteria, data, measures, out_directory):
         #------------------------------------------
         for j, measure in enumerate(measures):
             ax = plt.subplot(len(data),len(measures),len(measures)*i+(j+1))
-            one_train_plot(sub_name, sub_data, measure)
+            #plot_function(sub_name, sub_data, measure)
+            
     f.savefig(os.path.join(out_directory, 'all_{}_data_in_{}.jpg'.format(target_name, criteria)))
 
 if __name__ == "__main__":
@@ -218,34 +227,34 @@ if __name__ == "__main__":
 
     measures = ["loss", "r2_max", "r2_mean"]
     for subject, data in all_data.items():
-        multiples_train_plots(subject, data, measures, out_directory)
+        multiples_plots(one_train_plot, subject, data, measures, out_directory)
 
-        # for i, film in enumerate(data) : 
-        #         sub_name = film[0]
-        #         target_name = film[1][1][0]
-        #         #---------to correct in script----------------------------------
-        #         sub_data = [(target[0]+'_'+str(target[1]), dico) for (dico, target) in film[1:]]
-        #         #------------------------------------------
-        #         for j, measure in enumerate(measures):
-        #             plot_train_val_data(subject, sub_name, sub_data, measure)    
+    # #transform data in nii.gz
+    # for subject, value in all_data.items():
+    #     for film_data in value:
+    #         film_name = film_data[0]
+    #         datas = film_data[1:]
+    #         for data_target in datas:
+    #             target = data_target[1]
+    #             training_data = data_target[0]
+
+    #             target_str = target[0]+'_'+str(target[1])
+
+    #             title = 'r2_map_for_{}_{}_{}'.format(target_str, film_name, subject)
+    #             map_path = os.path.join(out_directory, title)
+
+    #             mymasker = NiftiMasker(mask_img=auditorymask,standardize=False,detrend=False,t_r=1.49,smoothing_fwhm=8)
+    #             mymasker.fit()
+
+    #             r2_stat = mymasker.inverse_transform(training_data['test_r2'].reshape(1,-1))
+    #             r2_stat.to_filename(map_path+'.nii.gz')
+
+    #             #brain_3D_map(r2_stat, title=title, hemishpere='right', threshold=0.05, output_file=map_path+'.png')
+    #             plot_stat_map(r2_stat, threshold = 0.00, output_file=map_path+'_stat_map.png', title=title)
+    
 
 
-
-        # for key, value in all_data.items():
-        #     for film in value:
-        #         str_target = film[2][0]+'_'+str(film[2][1])
-        #         film_name = film[0]
-        #         training_data = film[1]
-
-        #         title = 'r2_map_for_{}_{}_{}.nii.gz'.format(str_target, film_name, key)
-        #         map_path = os.path.join(out_directory, title)
-
-        #         mymasker = NiftiMasker(mask_img=auditorymask,standardize=False,detrend=False,t_r=1.49,smoothing_fwhm=8)
-        #         mymasker.fit()
-
-        #         r2_img = mymasker.inverse_transform(training_data['r2'].reshape(1,-1))
-        #         r2_img.to_filename(map_path)
-                #plot_stat_map(r2_img, threshold = 0.00, output_file=map_path)
+#__________________________________________________  
 
 
     # for sub, films in all_maps.items():
