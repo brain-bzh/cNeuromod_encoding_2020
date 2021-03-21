@@ -79,12 +79,13 @@ class SoundNetEncoding(nn.Module):
         return out
 
 class SoundNetEncoding_conv(nn.Module):
-    def __init__(self,pytorch_param_path,out_size,fmrihidden=1000, kernel_size = 1, nroi_attention=None, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,transfer=True,preload=True):
+    def __init__(self,pytorch_param_path,out_size,fmrihidden=1000, kernel_size = 1, nroi_attention=None, power_transform=False, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,transfer=True,preload=True):
         super(SoundNetEncoding_conv, self).__init__()
 
         self.soundnet = snd.SoundNet8_pytorch()
         self.fmrihidden = fmrihidden
         self.out_size = out_size
+        self.power_transform = power_transform
 
         if preload:
             print("Loading SoundNet weights...")
@@ -124,6 +125,8 @@ class SoundNetEncoding_conv(nn.Module):
         warnings.filterwarnings("ignore")
         with torch.no_grad():
             emb = self.soundnet(x)
+            if self.power_transform:
+                emb = torch.sqrt(emb)
 
         out = self.encoding_fmri(emb)
         

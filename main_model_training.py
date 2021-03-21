@@ -14,7 +14,6 @@ from Datasets_utils import SequentialDataset
 from audio_utils import load_audio_by_bit
 import librosa
 #Models
-from models import soundnet_model as sdn
 from models import encoding_models as encod
 #Train & Test
 from tqdm import tqdm
@@ -48,16 +47,22 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
     gpu = training_hyperparameters['gpu']
     batchsize = training_hyperparameters['batchsize']
     lr = training_hyperparameters['lr']
+    weight_decay = training_hyperparameters['weight_decay']
     nbepoch = training_hyperparameters['nbepoch']
     train_percent = training_hyperparameters['train_percent']
     test_percent = training_hyperparameters['test_percent']
     val_percent = training_hyperparameters['val_percent']
     mseloss = training_hyperparameters['mseloss']
+    decoupled_weightDecay = training_hyperparameters['decoupled_weightDecay']
+    power_transform = training_hyperparameters['power_transform']
+    #warm_restart = training_hyperparameters['warm_restart'] àtester
     #early_stopping = training_hyperparameters['early_stopping']
     #problem, that stop the training of any following test
     #to look how to implement a more interactable early_stopping
 
-    outfile_name = str(scale)+'_'+str(model.__name__)+'_'+str(fmrihidden)+'_ks_'+str(kernel_size)+'_lr_'+str(lr)+'_'
+    outfile_name = str(scale)+str(nroi)+'_'+str(model.__name__)+'_'+str(fmrihidden)+'_ks'+str(kernel_size)+'_lr'+str(lr)+'_wd'+str(weight_decay)+'_'
+    outfile_name = outfile_name+'decoupled_' if decoupled_weightDecay else outfile_name
+    outfile_name = outfile_name+'pt_' if power_transform else outfile_name
     destdir = outpath
 
     #-------------------------------------------------------------
@@ -101,14 +106,17 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
 
     #|--------------------------------------------------------------------------------------------------------------------------------------
     ### Model Setup
-    net = encod.SoundNetEncoding_conv(pytorch_param_path='./sound8.pth',fmrihidden=fmrihidden,out_size=nroi, kernel_size=kernel_size)
+    net = encod.SoundNetEncoding_conv(pytorch_param_path='./sound8.pth',fmrihidden=fmrihidden,out_size=nroi, kernel_size=kernel_size, power_transform=power_transform)
     if gpu : 
         net.to("cuda")
     else:
         net.to("cpu")
 
-    optimizer = optim.Adam(net.parameters(), lr = lr)
-    early_stopping = EarlyStopping(patience=10, verbose=True,delta=1e-3)
+    if decoupled_weightDecay : 
+        optimizer = optim.AdamW(net.parameters(), lr = lr, weight_decay=weight_decay)
+    elif not decoupled_weightDecay : 
+        optimizer = optim.Adam(net.parameters(), lr = lr, weight_decay=weight_decay)
+    #early_stopping = EarlyStopping(patience=10, verbose=True,delta=1e-3)
     enddate = datetime.now()
 
     #---------------------------------------------------------------------------------------------------------------------------------
@@ -127,7 +135,6 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
         for epoch in tqdm(range(nbepoch)):
             t_l, t_r2 = train(epoch,trainloader,net,optimizer,mseloss=mseloss, gpu=gpu)
             train_loss.append(t_l)
-            print(t_r2)
             train_r2_max.append(max(t_r2))
             train_r2_mean.append(np.mean(t_r2))
 
@@ -141,21 +148,21 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
             # and if it has, it will make a checkpoint of the current model
             
             #r2_forEL = -(val_r2_max[-1])
-            early_stopping(t_l, net)
+            # early_stopping(t_l, net)
 
-            if early_stopping.early_stop:
-                print("Early stopping")
-                break
+            # if early_stopping.early_stop:
+            #     print("Early stopping")
+            #     break
 
     except KeyboardInterrupt:
         print("Interrupted by user")
 
-    test_loss = test(1,testloader,net,optimizer,mseloss=mseloss, gpu=gpu)
+    test_loss, final_model = test(1,testloader,net,optimizer,mseloss=mseloss, gpu=gpu)
     print("Test Loss : {}".format(test_loss))
 
     #6 - Save Model
 
-    mistroifile = '/home/maelle/Database/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
+    mistroifile = '/home/maelle/Database/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 
     dt_string = enddate.strftime("%Y-%m-%d-%H-%M-%S")
     outfile_name += dt_string

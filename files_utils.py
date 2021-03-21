@@ -10,15 +10,22 @@ def print_dict(dico):
         for item in value :
             print('      {}'.format(item))
 
-def extract_value_from_string(string, start_index):
+def extract_value_from_string(string, start_index, stop_condition=(lambda x: False)):
     temp=''
-    while True:
+    condition = False
+    while not condition:
         try:
             temp += string[start_index]
+            if '.' not in temp:
+                target_value = int(temp)
+            else :
+                target_value = float(temp)
+
             start_index+=1
-            target_value = int(temp)
+            condition = stop_condition(string[start_index])
         except (IndexError, ValueError):
             break
+
     return target_value
 
 def fetchMRI(videofile,fmrilist):

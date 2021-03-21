@@ -198,6 +198,8 @@ def brain_3D_map(stat_img, title='', hemishpere='right', threshold=1.0, figure=N
     plotting.plot_surf_stat_map(fsaverage.infl_right, texture, hemi=hemishpere,title=title, colorbar=True,threshold=threshold, bg_map=fsaverage.sulc_right,output_file=output_file, figure=figure)
     #plus contour of ROI
 
+# def brain_stat_map()
+
 def multiples_plots(plot_function, criteria, data, measures, out_directory):
     f = plt.figure(figsize=(15*len(measures),15*len(data)))
     for i, film in enumerate(data) : 
