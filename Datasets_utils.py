@@ -1,5 +1,8 @@
 
 from random import sample
+import numpy as np
+from audio_utils import load_audio_by_bit
+import librosa
 from torch.utils.data import IterableDataset
 import torch
 
@@ -50,3 +53,22 @@ class SequentialDataset(IterableDataset):
 
     def __iter__(self):
         return iter(self.batches)
+
+def create_usable_audiofmri_datasets(data, tr, sr, name='data'):
+    print("getting audio files for {}...".format(name))
+    x = []
+    for (audio_path, mri_path) in data :
+        length = librosa.get_duration(filename = audio_path)
+        audio_segment = load_audio_by_bit(audio_path, 0, length, bitSize = tr, sr = sr)
+        x.append(audio_segment)
+    print("getting fMRI files for {}...".format(name))  
+    y = [np.load(mri_path)['X'] for (audio_path, mri_path) in data]
+    print("done.")
+
+    #resize matrix to have the same number of tr : 
+    for i, (seg_wav, seg_fmri) in enumerate(zip(x, y)) : 
+        min_len = min(len(seg_fmri), len(seg_wav))
+        x[i] = seg_wav[:min_len]
+        y[i] = seg_fmri[:min_len]
+    
+    return(x,y)

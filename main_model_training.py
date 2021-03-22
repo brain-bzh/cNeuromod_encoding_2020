@@ -4,15 +4,13 @@ import warnings
 import numpy as np
 from datetime import datetime
 #Get input & preprocess
-from files_utils import associate_stimuli_with_Parcellation, create_dir_if_needed
+from files_utils import associate_stimuli_with_Parcellation, create_dir_if_needed, print_dict
 from audio_utils import convert_Audio
 #Create Dataset
 from itertools import islice
 from random import shuffle, sample
 from torch.utils.data import DataLoader
-from Datasets_utils import SequentialDataset
-from audio_utils import load_audio_by_bit
-import librosa
+from Datasets_utils import SequentialDataset, create_usable_audiofmri_datasets
 #Models
 from models import encoding_models as encod
 #Train & Test
@@ -34,6 +32,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
     all_subs_files = data_selection['all_data']
     subject = data_selection['subject']
     film = data_selection['film']
+    sessions = data_selection['sessions']
 
     scale = data_processing['scale']
     tr = data_processing['tr']
@@ -41,6 +40,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
     selected_ROI =data_processing['selected_ROI']
     nroi = data_processing['nroi']
 
+    diff_TrainTest = training_hyperparameters['diff_sess_for_train_test']
     model = training_hyperparameters['model']
     fmrihidden = training_hyperparameters['fmrihidden']
     kernel_size = training_hyperparameters['kernel_size']
@@ -66,43 +66,49 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
     destdir = outpath
 
     #-------------------------------------------------------------
-    DataTest = all_subs_files[subject][film]
+    all_data = all_subs_files[subject][film]
 
-    print("getting audio files ...")
-    x = []
-    for (audio_path, mri_path) in DataTest :
-        length = librosa.get_duration(filename = audio_path)
-        audio_segment = load_audio_by_bit(audio_path, 0, length, bitSize = tr, sr = sr)
-        x.append(audio_segment)
-    print("getting fMRI files ...")  
-    y = [np.load(mri_path)['X'] for (audio_path, mri_path) in DataTest]
-    print("done.")
+    DataTest = []
+    DataTrain = []
+    for wav_fmri_pair in all_data:
+        wav = wav_fmri_pair[0]
+        fmri_sesvid = wav_fmri_pair[1:]
+        if len(fmri_sesvid)>1 and diff_TrainTest:
+            DataTrain.append((wav, fmri_sesvid[0]))
+            DataTest.append((wav, fmri_sesvid[1]))
+        else : 
+            DataTrain.append((wav, fmri_sesvid[0]))
 
-    #resize matrix to have the same number of tr : 
+    print(len(DataTest))
 
-    for i, (seg_wav, seg_fmri) in enumerate(zip(x, y)) : 
-        min_len = min(len(seg_fmri), len(seg_wav))
-        x[i] = seg_wav[:min_len]
-        y[i] = seg_fmri[:min_len]
+    xTrain, yTrain = create_usable_audiofmri_datasets(DataTrain, tr, sr, name='training')
+    TrainDataset = SequentialDataset(xTrain, yTrain, batch_size=batchsize, selection=selected_ROI)
+    total_train_len = len(TrainDataset)
+    train_len = int(np.floor(train_percent*total_train_len))
+    #if same dataset for training and testing
+    if len(DataTest)==0:
+        val_len = int(np.floor(val_percent*total_train_len))
+        test_len = total_train_len-train_len-val_len
+    #if separete datasets for training and testing
+    else:
+        xTest, yTest = create_usable_audiofmri_datasets(DataTest, tr, sr, name='test')
+        TestDataset = SequentialDataset(xTest, yTest, batch_size=batchsize, selection=selected_ROI)
+        total_test_len = len(TestDataset)
+        val_len = int(np.floor(val_percent*total_test_len))
+        test_len = total_test_len-val_len
 
-    dataset = SequentialDataset(x, y, batch_size=batchsize, selection=selected_ROI)
+    print(f'size of train, val and set : ', train_len, test_len, val_len)
 
-    total_len = len(dataset)
-    train_len = int(np.floor(train_percent*total_len))
-    val_len = int(np.floor(val_percent*total_len))
-    test_len = total_len-train_len-val_len
-    print(f'size of total, train, val and set : ', total_len, train_len, test_len, val_len)
-
-
-    loader = DataLoader(dataset, batch_size=None)
-    #trainloader = islice(loader, 0, train_len)
-    #valloader = islice(loader, train_len, train_len+val_len)
-    #testloader = islice(loader, train_len+val_len, None)
-
-    loader = list(loader)
+    loader = list(DataLoader(TrainDataset, batch_size=None))
     trainloader = sample(loader[:train_len], k=train_len)
-    valloader = sample(loader[train_len:train_len+val_len], k=val_len)
-    testloader = sample(loader[train_len+val_len:train_len+val_len+test_len], k=test_len)
+
+    if len(DataTest)==0:
+        valloader = sample(loader[train_len:train_len+val_len], k=val_len)
+        testloader = sample(loader[train_len+val_len:train_len+val_len+test_len], k=test_len)
+    else : 
+        second_loader = list(DataLoader(TestDataset, batch_size=None))
+        valloader = sample(second_loader[:val_len], k=val_len)
+        testloader = sample(second_loader[val_len:], k=test_len)
 
     #|--------------------------------------------------------------------------------------------------------------------------------------
     ### Model Setup
@@ -116,7 +122,7 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
         optimizer = optim.AdamW(net.parameters(), lr = lr, weight_decay=weight_decay)
     elif not decoupled_weightDecay : 
         optimizer = optim.Adam(net.parameters(), lr = lr, weight_decay=weight_decay)
-    #early_stopping = EarlyStopping(patience=10, verbose=True,delta=1e-3)
+    early_stopping = EarlyStopping(patience=10, verbose=True,delta=0)
     enddate = datetime.now()
 
     #---------------------------------------------------------------------------------------------------------------------------------
@@ -147,12 +153,12 @@ def main_model_training(outpath, data_selection, data_processing, training_hyper
             # early_stopping needs the R2 mean to check if it has increased, 
             # and if it has, it will make a checkpoint of the current model
             
-            #r2_forEL = -(val_r2_max[-1])
-            # early_stopping(t_l, net)
+            r2_forEL = -(val_r2_max[-1])
+            early_stopping(t_l, net)
 
-            # if early_stopping.early_stop:
-            #     print("Early stopping")
-            #     break
+            if early_stopping.early_stop:
+                print("Early stopping")
+                break
 
     except KeyboardInterrupt:
         print("Interrupted by user")

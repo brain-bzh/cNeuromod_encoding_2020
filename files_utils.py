@@ -62,12 +62,12 @@ def fetchMRI(videofile,fmrilist):
             numSessions.append(int(run[index_sess+7:index_sess+10]))
             
         if numSessions[0] < numSessions[1] : 
-            return [(videofile, mriMatchs[0]), (videofile, mriMatchs[1])]
+            return [(videofile, mriMatchs[0], mriMatchs[1])]#), (videofile, mriMatchs[1])]
 
         else : 
-            return [(videofile, mriMatchs[1]), (videofile, mriMatchs[0])]
+            return [(videofile, mriMatchs[1], mriMatchs[0])]#), (videofile, mriMatchs[0])]
     elif len(mriMatchs) == 0 : 
-        print('no parcellation was found for {} as {}'.format(filename, cur_name))
+        print('no parcellation embedding was found for {}'.format(filename))
         return []
     else :
         return [(videofile, mriMatchs[0])]
@@ -93,7 +93,6 @@ def associate_stimuli_with_Parcellation(stimuli_path, path_parcellation):
                 sub_segments[film].extend(fetchMRI(segments[j], sub))
 
             all_subs[i] = sub_segments
-
     return all_subs
 
 def cNeuromod_subject_convention(path, name, zero_index = True):

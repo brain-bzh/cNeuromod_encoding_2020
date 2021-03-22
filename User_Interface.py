@@ -11,7 +11,6 @@ from models import encoding_models as encod
 from torch import nn, optim, load, device
 from train_utils import EarlyStopping
 
-
 date = datetime.now()
 dt_string = date.strftime("%Y%m%d")
 #-------------------------------ARGUMENTS----------------------------------------------
@@ -21,8 +20,11 @@ wolf = 'wolf_of_wall_street'
 life = "life"
 hidden = "hidden_figures"
 
-films = [bourne, wolf, life, hidden]
-subjects = [0,1,2,3,4]
+data_selection = {
+    'films':[life, hidden],
+    'subjects':[0,1,2,3,4],
+    'sessions':[1,2]
+}
 
 data_processing = {
     'scale': ['MIST_ROI', 'auditory_Voxels'], #'MIST_ROI'
@@ -35,20 +37,23 @@ data_processing = {
 #model parameters
 allfmrihidden=[1000]
 models = [encod.SoundNetEncoding_conv]
-kernel_sizes=[1, 5, 10]
+kernel_sizes=[5]
 
 training_hyperparameters = {
-    'gpu':False,
     'batchsize':30,
+    'train_percent':1.0,
+    'test_percent':0.5,
+    'val_percent':0.5,
+    #to change, good for now
+    'diff_sess_for_train_test':True,
+
+    'gpu':False,
     'lr':0.01,
     'nbepoch': 100,
-    'train_percent':0.6,
-    'test_percent':0.2,
-    'val_percent':0.2,
     'mseloss':nn.MSELoss(reduction='sum'),
-    'weight_decay':[0, 1e-1, 1e-2, 1e-3],
-    'decoupled_weightDecay' : [True, False],
-    'power_transform' : [True, False]
+    'weight_decay':[1e-2],
+    'decoupled_weightDecay' : [True],
+    'power_transform' : [False]
     #'warm_restart' : [True, False] à tester
     #'early_stopping':EarlyStopping(patience=10, verbose=True,delta=1e-6)
     #problem, that stop the training of any following test
@@ -58,7 +63,6 @@ training_hyperparameters = {
 #----------------------Path?_loop-----------------------------------------------------------------------
 if __name__ == "__main__":
     for scale, select_roi, nroi in zip(data_processing['scale'],  data_processing['selected_ROI'], data_processing['nroi']):
-        print('{} {} {}'.format(scale, select_roi, nroi))
         #paths
         outpath = "/home/maelle/Results/"
         stimuli_path = '/home/maelle/Database/fMRI_datasets/cneuromod/movie10/stimuli' #'/home/brain/Data_Base/cneuromod/movie10/stimuli' 
@@ -66,15 +70,15 @@ if __name__ == "__main__":
         embed_used = os.path.basename(path_embed).replace('_', '')
         path_parcellation = os.path.join(path_embed, scale) #'/home/brain/Data_Base/movie10_parc'
         all_subs_files = fu.associate_stimuli_with_Parcellation(stimuli_path, path_parcellation)
-        resultpath = outpath+dt_string+"_optim_{}{}_lr0.01_{}epochs_{}".format(scale,nroi, training_hyperparameters['nbepoch'],embed_used)
+        resultpath = outpath+dt_string+"_generalisation_btw_sessions_{}{}_lr0.01_{}epochs_{}".format(scale,nroi, training_hyperparameters['nbepoch'],embed_used)
         fu.create_dir_if_needed(outpath)
 
 #--------------------------TRAINING LOOP-------------------------------------------------------------------
-        for subject in subjects:
+        for subject in data_selection['subjects']:
             outpath_sub = os.path.join(resultpath, 'subject_'+str(subject))
             fu.create_dir_if_needed(outpath_sub)
 
-            for film in films:
+            for film in data_selection['films']:
                 outpath_film = os.path.join(outpath_sub, film)
                 fu.create_dir_if_needed(outpath_film)
 
@@ -89,11 +93,10 @@ if __name__ == "__main__":
                                         dp['selected_ROI'] = select_roi
                                         dp['nroi'] = nroi  
 
-                                        data_selection = {
-                                            'all_data':all_subs_files,
-                                            'subject':subject,
-                                            'film':film
-                                        }
+                                        ds = data_selection.copy()
+                                        ds['all_data'] = all_subs_files
+                                        ds['subject'] = subject
+                                        ds['film'] = film
 
                                         train_HP = training_hyperparameters.copy()
                                         train_HP['model'] = model
@@ -103,7 +106,7 @@ if __name__ == "__main__":
                                         train_HP['decoupled_weightDecay'] = decoupled_weightDecay
                                         train_HP['power_transform'] = power_transform
 
-                                        main_model_training(outpath_film, data_selection, dp, train_HP)
+                                        main_model_training(outpath_film, ds, dp, train_HP)
 
         fu.rename_object(resultpath, 'subject_', fu.cNeuromod_subject_convention, objects=['dirs'])
         
