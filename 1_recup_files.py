@@ -1,10 +1,11 @@
 import os
 
 def search_directory(path, dir_name, look_in_hidden_dir = False):
-'''
-Have to see if pybids isn't easier
-to finish; instead of giving the exact path, this function look for one specified directory given the name and the starting path to search; 
-'''
+    '''
+    Have to see if pybids isn't easier
+    to finish; instead of giving the exact path, this function look for one specified directory 
+    given the name and the starting path to search
+    '''
     sub_files = os.listdir(path)
     dirs_path = [(subfile, os.path.join(path, subfile))for subfile in sub_files if os.path.isdir(os.path.join(path, subfile)) and not subfile[0]=='.']
     stim_path = ''
