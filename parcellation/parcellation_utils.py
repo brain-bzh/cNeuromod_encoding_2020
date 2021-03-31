@@ -3,7 +3,7 @@
 # First do a function that does parcellation for one individual file
 # These are the files we will need for just one processing
 
-from nilearn.input_data import NiftiMasker
+from nilearn.input_data import NiftiMasker, NiftiLabelsMasker
 
 from load_confounds import Params24
 import os,sys, argparse
@@ -15,30 +15,13 @@ from nilearn.plotting import plot_matrix
 from nilearn.connectome import ConnectivityMeasure
 
 
-# basepath = '/home/nfarrugi/git/neuromod/cneuromod/movie10/derivatives/fmriprep1.5.0/fmriprep'
-basepath = '\~/projects/rrg-pbellec/datasets/cneuromod_new/friends/derivatives/fmriprep-20.1.0/fmriprep/'
-mistroicsv = '\~/DataBase/fMRI_parcellations/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
-mistroi_labelsimg = '\~/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'hgx ytfé(vgrbx poujhyn-,èfséz!)
-
-savepath = '\~/DataBase/fMRI_Embeddings/Friends/embed_2021_norm'
+# basepath = '/~/nfarrugi/git/neuromod/cneuromod/movie10/derivatives/fmriprep1.5.0/fmriprep'
+basepath = '/home/maellef/projects/rrg-pbellec/datasets/cneuromod_new/friends/derivatives/fmriprep-20.1.0/fmriprep/'
+mistroicsv = '/home/maellef/DataBase/fMRI_parcellations/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
+mistroi_labelsimg = '/home/maellef/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
+auditory_mask = '/home/maellef/git_dir/cNeuromod_encoding_2020/parcellation/STG_middle.nii.gz'
+savepath = '/home/maellef/DataBase/fMRI_Embeddings/Friends/embed_2021_norm'
 os.makedirs(savepath,exist_ok=True)
-
-
-def connectome_test(fmri_data, savepath):
-    myconn = ConnectivityMeasure(kind='correlation',discard_diagonal=True)
-    conn = myconn.fit_transform(fmri_data.reshape(1,406,210))
-    conn.shape
-
-    roiinfo = pd.read_csv(mistroicsv,sep=';')
-    labels = roiinfo['name'].to_numpy()
-
-    f=plt.figure(figsize=(40,20))
-    plt.subplot(2,1,1)
-    plot_matrix(conn[0],reorder=True,labels=labels,figure=f)
-    plt.subplot(2,1,2)
-    plt.hist(conn[0].ravel())
-    f.savefig(savepath)
-
 
 def parcellate_auditory(filepath_fmri,auditorymask,save=True,savepath='./results'):
     savepath = os.path.join(savepath, 'auditory_Voxels')
@@ -68,9 +51,7 @@ def parcellate_auditory(filepath_fmri,auditorymask,save=True,savepath='./results
         if save:
             print('saving voxel parcellations ...')
             os.makedirs(savepath,exist_ok=True)
-            np.savez_compressed(filepath+'.npz',X=X)
-            connectome_test(fmri_data=X, savepath=filepath+'.jpg')
-        
+            np.savez_compressed(filepath+'.npz',X=X)        
         
         return X
     
@@ -105,7 +86,6 @@ def parcellate_MIST(filepath_fmri,labels_img=mistroi_labelsimg,save=True,savepat
             print('saving ROI parcellations ...')
             os.makedirs(savepath,exist_ok=True)          
             np.savez_compressed(os.path.join(savepath,filebase+'.npz'),X=X)
-            connectome_test(fmri_data=X, savepath=filepath+'.jpg')
         
         return X  
 
@@ -118,19 +98,12 @@ if __name__ == "__main__":
 
     subjectdir = os.path.join(basepath, subject)
     savepath = os.path.join(savepath, subject)
-    print('test1')
     for s in os.listdir(subjectdir):
-        print('test2')
-        sesspath = os.path.join(subjectdir, s)
-        if s.find('ses')>0:
-            sesspath = os.path.join(subjectdir, s, func)
-            print(sesspath)  
+        if s.find('ses')>-1:
+            sesspath = os.path.join(subjectdir, s, 'func')
             for curfile in os.listdir(sesspath):               
-                if curfile.find('preproc_bold.nii.gz') >0:
+                if curfile.find('preproc_bold.nii.gz')>-1 and curfile.find('2009')>-1:
                     filepath = os.path.join(sesspath, curfile)
                     print('Parcellating file ' + filepath)
                     parcellate_MIST(filepath,save=True,savepath=savepath)
-                    parcellate_auditory(filepath,auditorymask='parcellation/STG_middle.nii.gz',save=True,savepath=savepath)
-
-/home/maellef/Friends_train/lib/python3.6/site-packages/nilearn/datasets/__init__.py:90: FutureWarning: Fetchers from the nilearn.datasets module will be updated in version$
-  "Numpy arrays.", FutureWarning)
+                    parcellate_auditory(filepath,auditorymask=auditory_mask,save=True,savepath=savepath)

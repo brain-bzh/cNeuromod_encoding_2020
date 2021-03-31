@@ -7,10 +7,11 @@ from torch import load, device
 from files_utils import create_dir_if_needed, print_dict, extract_value_from_string
 
 from nilearn import image, plotting, datasets, surface
-from nilearn.plotting import plot_stat_map, view_img, view_img_on_surf
+from nilearn.plotting import plot_stat_map, view_img, view_img_on_surf, plot_matrix
 from nilearn.regions import signals_to_img_labels
 from nilearn.image import load_img, mean_img
 from nilearn.input_data import NiftiMasker
+from nilearn.connectome import ConnectivityMeasure
 
 from matplotlib import pyplot as plt 
 
@@ -25,6 +26,22 @@ roi_path = '/home/maelle/Database/MIST_parcellation/Parcel_Information/MIST_ROI.
 datapath = '/home/maelle/Results/20210211_tests_kernel_MIST_ROI_embed_2020_norm/subject_0'
 out_directory = os.path.join(datapath, 'analysis')
 create_dir_if_needed(out_directory)
+
+def connectome_test(fmri_data, savepath):
+    myconn = ConnectivityMeasure(kind='correlation',discard_diagonal=True)
+    conn = myconn.fit_transform(fmri_data.reshape(1,406,210))
+    conn.shape
+
+    roiinfo = pd.read_csv(mistroicsv,sep=';')
+    labels = roiinfo['name'].to_numpy()
+
+    f=plt.figure(figsize=(40,20))
+    plt.subplot(2,1,1)
+    plot_matrix(conn[0],reorder=True,labels=labels,figure=f)
+    plt.subplot(2,1,2)
+    plt.hist(conn[0].ravel())
+    f.savefig(savepath)
+
 
 #--prep data---------------------------------------------------------------
 
