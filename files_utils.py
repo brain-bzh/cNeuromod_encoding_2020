@@ -1,4 +1,5 @@
 import os
+from audio_utils import convert_Audio
 
 def create_dir_if_needed(path):
     if not os.path.isdir(path):
@@ -72,12 +73,20 @@ def fetchMRI(videofile,fmrilist):
     else :
         return [(videofile, mriMatchs[0])]
 
-def associate_stimuli_with_Parcellation(stimuli_path, path_parcellation):
+def associate_stimuli_with_Parcellation(stimuli_path, path_parcellation, stim_outpath=None):
     stimuli_dic = {}
     for film in os.listdir(stimuli_path):
         film_path = os.path.join(stimuli_path, film)
         if os.path.isdir(film_path):
-            film_wav = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.wav']
+            if stim_outpath==None:
+                film_wav = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.wav']
+            else : 
+                #if outpath, you need to create wav from mkv    
+                film_mkv = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.mkv']
+                film_wav = [os.path.join(stim_outpath, seg[:-4]+'.wav') for seg in os.listdir(film_path) if seg[-4:] == '.mkv']
+                for mkv, wav in zip(film_mkv, film_path):
+                    convert_Audio(mkv, wav)
+
             stimuli_dic[film] = sorted(film_wav)
 
     all_subs = []

@@ -6,7 +6,7 @@ from datetime import datetime
 #Get input & preprocess
 import files_utils as fu
 import visualisation_utils as vu
-from main_model_training import main_model_training
+from model_training import model_training
 from models import encoding_models as encod
 from torch import nn, optim, load, device
 from train_utils import EarlyStopping
@@ -106,7 +106,7 @@ if __name__ == "__main__":
                                         train_HP['decoupled_weightDecay'] = decoupled_weightDecay
                                         train_HP['power_transform'] = power_transform
 
-                                        main_model_training(outpath_film, ds, dp, train_HP)
+                                        model_training(outpath_film, ds, dp, train_HP)
 
         fu.rename_object(resultpath, 'subject_', fu.cNeuromod_subject_convention, objects=['dirs'])
         
