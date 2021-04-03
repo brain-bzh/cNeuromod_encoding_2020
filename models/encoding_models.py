@@ -79,7 +79,7 @@ class SoundNetEncoding(nn.Module):
         return out
 
 class SoundNetEncoding_conv(nn.Module):
-    def __init__(self,pytorch_param_path,out_size,fmrihidden=1000, kernel_size = 1, nroi_attention=None, power_transform=False, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,transfer=True,preload=True):
+    def __init__(self,pytorch_param_path,out_size,fmrihidden=1000, kernel_size = 1, output_layer = 7, train_limit = 5, nroi_attention=None, power_transform=False, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,transfer=True,preload=True):
         super(SoundNetEncoding_conv, self).__init__()
 
         self.soundnet = snd.SoundNet8_pytorch()
@@ -93,10 +93,14 @@ class SoundNetEncoding_conv(nn.Module):
             self.soundnet.load_state_dict(torch.load(pytorch_param_path))
             print("Pretrained model loaded")
             if transfer:
-                #freeze the parameters of soundNet
+                #freeze the parameters of soundNet up to desired training layer 
+                # (here we want to train layer 6  and following so we freeze up to layer 5)
                 print("Transfer learning - backbone is fixed")
-                for param in self.soundnet.parameters():
-                    param.requires_grad = False
+                for layer, param in enumerate(self.soundnet.parameters()):
+                    if layer < (train_limit)*4 :
+                        param.requires_grad = False
+                    else : 
+                        param.requires_grad = True
             else:
                 print("Finetuning : backbone will be optimized")
 
@@ -122,12 +126,9 @@ class SoundNetEncoding_conv(nn.Module):
             self.hrf_model=None
 
     def forward(self, x):
-        warnings.filterwarnings("ignore")
-        with torch.no_grad():
-            emb = self.soundnet(x)
-            if self.power_transform:
-                emb = torch.sqrt(emb)
-
+        emb = self.soundnet(x)
+        if self.power_transform:
+            emb = torch.sqrt(emb)
         out = self.encoding_fmri(emb)
         
         return out

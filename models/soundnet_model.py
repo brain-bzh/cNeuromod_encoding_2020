@@ -4,10 +4,12 @@ from nistats import hemodynamic_models
 import numpy as np
 
 class SoundNet8_pytorch(nn.Module):
-    def __init__(self):
+    def __init__(self, output_layer = 7, train_limit = 5):
         super(SoundNet8_pytorch, self).__init__()
         
         self.define_module()
+        self.output_layer = output_layer
+        self.train_limit = train_limit
         
     def define_module(self):
         self.conv1 = nn.Sequential(
@@ -56,9 +58,16 @@ class SoundNet8_pytorch(nn.Module):
         )
 
     def forward(self, x):
-        for net in [self.conv1, self.conv2, self.conv3, self.conv4, self.conv5, self.conv6, self.conv7]:
-            x = net(x)
-            
+        warnings.filterwarnings("ignore")
+
+        soundNet_layers = [self.conv1, self.conv2, self.conv3, self.conv4, self.conv5, self.conv6, self.conv7, self.conv8, self.conv8_2] 
+        with torch.no_grad():
+            for net in soundNet_layers[:self.train_limit]:
+                x = net(x)
+        if self.train_limit != self.output_layer : 
+            for net in soundNet_layers[self.train_limit:self.output_layer]:
+                x = net(x)
+
         ### "Truncated" soundnet to only extract conv7 
 
         #object_pred = self.conv8(x)
