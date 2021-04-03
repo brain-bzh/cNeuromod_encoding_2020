@@ -29,29 +29,33 @@ def extract_value_from_string(string, start_index, stop_condition=(lambda x: Fal
 
     return target_value
 
-def fetchMRI(videofile,fmrilist):
+def fetchMRI(videofile,fmrilist, movie10=False):
     ### isolate the mkv file (->filename) and the rest of the path (->videopath)
 
     videopath,filename = os.path.split(videofile)
-    #formatting the name to correspond to mri run formatting
-    name = filename.replace('_', '')
-    if name.startswith('the'):
-        name = name.replace('the', '', 1)
-    if name.find('life') > -1 :
-        name = name.replace('life1', 'life')
 
-    name = name.replace('seg','_run-')
-    name = name.replace('subsampl','')
-    ## Rename to match the parcellated filenames
-    name = name.replace('.wav','npz.npz')
+    if movie10 : 
+        #formatting the name to correspond to mri run formatting
+        name = filename.replace('_', '')
+        if name.startswith('the'):
+            name = name.replace('the', '', 1)
+        if name.find('life') > -1 :
+            name = name.replace('life1', 'life')
+
+        name = name.replace('seg','_run-')
+        name = name.replace('subsampl','')
+        ## Rename to match the parcellated filenames
+        name = name.replace('.wav','.npz.npz')
+    else : 
+        name = filename[:-10]
+        name = name.replace('.wav','.npz')
 
     # list of all parcellated filenames 
-
     # match videofilename with parcellated files
     mriMatchs = []
     for curfile in fmrilist:
         _, cur_name = os.path.split(curfile)
-        if cur_name[23:] == (name):
+        if cur_name.find(name) >-1 :
             mriMatchs.append(curfile)    
     #in case of multiple run for 1 film segment
     name_seg = filename[:-4]
@@ -78,15 +82,14 @@ def associate_stimuli_with_Parcellation(stimuli_path, path_parcellation, stim_ou
     for film in os.listdir(stimuli_path):
         film_path = os.path.join(stimuli_path, film)
         if os.path.isdir(film_path):
-            if stim_outpath==None:
-                film_wav = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.wav']
-            else : 
-                #if outpath, you need to create wav from mkv    
-                film_mkv = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.mkv']
-                film_wav = [os.path.join(stim_outpath, seg[:-4]+'.wav') for seg in os.listdir(film_path) if seg[-4:] == '.mkv']
-                for mkv, wav in zip(film_mkv, film_path):
-                    convert_Audio(mkv, wav)
-
+            # if stim_outpath==None:
+            film_wav = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.wav']
+            # else : 
+            #     #if outpath, you need to create wav from mkv    
+            #     film_mkv = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.mkv']
+            #     film_wav = [os.path.join(stim_outpath, seg[:-4]+'.wav') for seg in os.listdir(film_path) if seg[-4:] == '.mkv']
+            #     for mkv, wav in zip(film_mkv, film_path):
+            #         convert_Audio(mkv, wav)
             stimuli_dic[film] = sorted(film_wav)
 
     all_subs = []
