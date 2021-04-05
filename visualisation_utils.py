@@ -22,22 +22,25 @@ from matplotlib import pyplot as plt
 # target_path = os.path.join(data_path, target_dir)
 # out_directory = os.path.join(data_path, 'analysis', target_dir)
 
+mistroicsv = '/home/maelle/GitHub_repositories/cNeuromod_encoding_2020/parcellation/MIST_ROI.csv'
 roi_path = '/home/maelle/Database/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
 datapath = '/home/maelle/Results/20210211_tests_kernel_MIST_ROI_embed_2020_norm/subject_0'
 out_directory = os.path.join(datapath, 'analysis')
 create_dir_if_needed(out_directory)
 
-def connectome_test(fmri_data, savepath):
+def connectome_test(fmri_data, savepath, roi = True):
     myconn = ConnectivityMeasure(kind='correlation',discard_diagonal=True)
-    conn = myconn.fit_transform(fmri_data.reshape(1,406,210))
-    conn.shape
+    conn = myconn.fit_transform(fmri_data)
 
     roiinfo = pd.read_csv(mistroicsv,sep=';')
     labels = roiinfo['name'].to_numpy()
 
     f=plt.figure(figsize=(40,20))
     plt.subplot(2,1,1)
-    plot_matrix(conn[0],reorder=True,labels=labels,figure=f)
+    if roi :
+        plot_matrix(conn[0],reorder=True,labels=labels,figure=f)
+    else :
+        plot_matrix(conn[0],figure=f)
     plt.subplot(2,1,2)
     plt.hist(conn[0].ravel())
     f.savefig(savepath)
