@@ -1,6 +1,13 @@
 import os
 from audio_utils import convert_Audio
 
+all_films = {
+    'bourne':'bourne_supremacy',
+    'wolf':'wolf_of_wall_street',
+    'life':'life',
+    'figures':'hidden_figures',
+}
+
 def create_dir_if_needed(path):
     if not os.path.isdir(path):
         os.makedirs(path)
@@ -29,46 +36,28 @@ def extract_value_from_string(string, start_index, stop_condition=(lambda x: Fal
 
     return target_value
 
-def fetchMRI(videofile,fmrilist, movie10=False):
+#def separate_seasons(list, keyword='s0'):
+
+def fetchMRI(videofile,fmrilist):
     ### isolate the mkv file (->filename) and the rest of the path (->videopath)
+    filmPath,filename = os.path.split(videofile)
+    datasetPath, film = os.path.split(filmPath)
+    _, dataset = os.path.split(datasetPath)
+    task, _  = os.path.splitext(filename[len(dataset)+1:])
 
-    videopath,filename = os.path.split(videofile)
-
-    if movie10 : 
-        #formatting the name to correspond to mri run formatting
-        name = filename.replace('_', '')
-        if name.startswith('the'):
-            name = name.replace('the', '', 1)
-        if name.find('life') > -1 :
-            name = name.replace('life1', 'life')
-
-        name = name.replace('seg','_run-')
-        name = name.replace('subsampl','')
-        ## Rename to match the parcellated filenames
-        name = name.replace('.wav','.npz.npz')
-    else : 
-        name = filename[:-10]
-        name = name.replace('.wav','.npz')
-
-    # list of all parcellated filenames 
-    # match videofilename with parcellated files
     mriMatchs = []
     for curfile in fmrilist:
         _, cur_name = os.path.split(curfile)
-        if cur_name.find(name) >-1 :
+        if cur_name.find(task) >-1 :
             mriMatchs.append(curfile)    
-    #in case of multiple run for 1 film segment
-    name_seg = filename[:-4]
 
     if len(mriMatchs) > 1 :
         numSessions = []
         for run in mriMatchs :
-            index_sess = run.find('ses-vid')
-            numSessions.append(int(run[index_sess+7:index_sess+10]))
-            
-        if numSessions[0] < numSessions[1] : 
+            index_ses = run.find('ses-')
+            numSessions.append(int(run[index_ses+4:index_ses+7]))
+        if numSessions[0] < numSessions[1] :
             return [(videofile, mriMatchs[0], mriMatchs[1])]#), (videofile, mriMatchs[1])]
-
         else : 
             return [(videofile, mriMatchs[1], mriMatchs[0])]#), (videofile, mriMatchs[0])]
     elif len(mriMatchs) == 0 : 
@@ -77,46 +66,56 @@ def fetchMRI(videofile,fmrilist, movie10=False):
     else :
         return [(videofile, mriMatchs[0])]
 
-def associate_stimuli_with_Parcellation(stimuli_path, path_parcellation, stim_outpath=None):
-    stimuli_dic = {}
-    for film in os.listdir(stimuli_path):
-        film_path = os.path.join(stimuli_path, film)
-        if os.path.isdir(film_path):
-            # if stim_outpath==None:
-            film_wav = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.wav']
-            # else : 
-            #     #if outpath, you need to create wav from mkv    
-            #     film_mkv = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.mkv']
-            #     film_wav = [os.path.join(stim_outpath, seg[:-4]+'.wav') for seg in os.listdir(film_path) if seg[-4:] == '.mkv']
-            #     for mkv, wav in zip(film_mkv, film_path):
-            #         convert_Audio(mkv, wav)
-            stimuli_dic[film] = sorted(film_wav)
+def associate_stimuli_with_Parcellation(stimuli_path, path_parcellation):
+    if os.path.isdir(stimuli_path):
+        stimuli_wav = [os.path.join(stimuli_path, seg) for seg in sorted(os.listdir(stimuli_path)) if seg[-4:] == '.wav']
+    else:
+        print("error - incorrect path")
+        return 0
 
-    all_subs = []
-    for sub_dir in sorted(os.listdir(path_parcellation)):
-        sub_path = os.path.join(path_parcellation, sub_dir)
-        all_subs.append([os.path.join(sub_path, mri_data) for mri_data in os.listdir(sub_path) if mri_data[-4:]==".npz"])
-
-    for i, sub in enumerate(all_subs) : 
-        sub_segments = {}
-        for film, segments in stimuli_dic.items() : 
-            sub_segments[film] = []
-            for j in range(len(segments)):
-                sub_segments[film].extend(fetchMRI(segments[j], sub))
-
-            all_subs[i] = sub_segments
-    return all_subs
+    parcellation_list = [os.path.join(path_parcellation, mri_data) for mri_data in sorted(os.listdir(path_parcellation)) if mri_data[-4:]==".npz"]
+    pair_wav_mri = []
+    for i in range(len(stimuli_wav)):
+        pair_wav_mri.extend(fetchMRI(stimuli_wav[i], parcellation_list))
+    return pair_wav_mri
 
 def cNeuromod_subject_convention(path, name, zero_index = True):
     num = int(name[-1])
     if zero_index : 
         num +=1
 
-    new_name = 'sub'+str(num)
-    if new_name != name:
-        prev_path = os.path.join(path, name)
-        new_path = os.path.join(path, new_name)
-        os.rename(prev_path, new_path)
+    return 'sub'+str(num)
+
+def cNeuromod_embeddings_convention(path, name):
+    #name_model : sub-0X_ses-XXX_task-<sXXe/film><xxx>
+    #path_model : your_path/DataBase/fMRI_Embeddings/your_embedding/dataset/subject
+
+    _, ext = os.path.splitext(name)
+    subject = os.path.basename(path)
+
+    sessIndex = name.find('ses-')+4
+    vidIndex = name.find('vid')+3
+    if sessIndex > 3 or vidIndex > 2 :
+        i = max(sessIndex, vidIndex)
+        session = 'ses-'+name[i:i+3]
+    else : 
+        print('error : no sufficient information to name the file')
+        return None
+    
+    dataset = os.path.basename(os.path.dirname(path))
+    if dataset == 'movie10':
+        for film in all_films.keys():
+            if name.find(film)>-1:
+                break
+        taskNumI = name.find('run-')+4
+        task = 'task-'+film+name[taskNumI:taskNumI+2]
+
+        new_name = subject+'_'+session+'_'+task+ext
+
+    elif dataset == 'friends':
+        new_name = name
+    
+    return new_name
 
 def rename_object(path, keyword_to_replace, rename_convention, objects=['dirs','files']):
     for path, dirs, files in os.walk(path):
@@ -126,12 +125,17 @@ def rename_object(path, keyword_to_replace, rename_convention, objects=['dirs','
             elif key_object == 'files':
                 key_list = files
             
-            for obj in key_list:
-                #print(obj)
-                if keyword_to_replace in obj:
-                    rename_convention(path, obj)
+            for filename in key_list:
+                if keyword_to_replace in filename:
+                    new_name = rename_convention(path, filename)
+                    prev_path = os.path.join(path, filename)
+                    new_path = os.path.join(path, new_name)
+                    os.rename(prev_path, new_path)
+
 
 if __name__ == "__main__":
-    path = "/home/maelle/Results/20210201_tests_kernel_voxel_Norm_embed2020"
-    rename_object(path, 'subject_', cNeuromod_subject_convention, objects=['dirs'])
+    path_vox = "/home/maelle/DataBase/fMRI_Embeddings/auditory_Voxels/movie10"
+    rename_object(path_vox, 'run', cNeuromod_embeddings_convention, objects=['files'])
 
+    path_MIST = "/home/maelle/DataBase/fMRI_Embeddings/MIST_ROI/movie10"
+    rename_object(path_MIST, 'run', cNeuromod_embeddings_convention, objects=['files'])
