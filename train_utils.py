@@ -51,8 +51,11 @@ def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
     all_y = []
     all_y_predicted = []
     running_loss = 0
-    net.soundnet.eval()
-    net.encoding_fmri.train()
+    #------------------------to CHECK with Nicolas---------------------------------------
+    #net.soundnet.eval()
+    #net.encoding_fmri.train()
+    #------------------------------------------------------------------------------------
+    net.train()
 
     for batch_nb, (x, y) in enumerate(trainloader):
         optimizer.zero_grad()
@@ -85,6 +88,40 @@ def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
         
     r2_model = r2_score(np.vstack(all_y),np.vstack(all_y_predicted),multioutput='raw_values') 
     return running_loss/batch_nb, r2_model
+
+def train_without_grad(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
+    all_y = []
+    all_y_predicted = []
+    running_loss = 0
+    net.train()
+
+    with torch.no_grad() : 
+        for batch_nb, (x, y) in enumerate(trainloader):
+            optimizer.zero_grad()
+            batch_size = x.shape[0]
+
+            # for 1D output 
+            x =  torch.Tensor(x).view(1,1,-1, 1) 
+            if gpu:
+                x = x.cuda()  
+            # Forward pass
+            predicted_y = net(x)
+            predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()
+            predicted_y = predicted_y[:batch_size]
+            y = y.double()
+            if gpu:
+                y = y.cuda()
+
+            loss=delta*mseloss(predicted_y,y)/batch_size
+
+            all_y.append(y.cpu().numpy().reshape(batch_size,-1))
+            all_y_predicted.append(predicted_y.detach().cpu().numpy().reshape(batch_size,-1))
+            running_loss += loss.item()
+            
+
+        r2_model = r2_score(np.vstack(all_y),np.vstack(all_y_predicted),multioutput='raw_values') 
+        return running_loss/batch_nb, r2_model
+
 
 
 def test(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
