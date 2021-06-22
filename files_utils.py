@@ -48,6 +48,7 @@ def fetchMRI(videofile,fmrilist):
     mriMatchs = []
     for curfile in fmrilist:
         _, cur_name = os.path.split(curfile)
+        #print(task, cur_name)
         if cur_name.find(task) >-1 :
             mriMatchs.append(curfile)    
 
@@ -67,12 +68,7 @@ def fetchMRI(videofile,fmrilist):
         return [(videofile, mriMatchs[0])]
 
 def associate_stimuli_with_Parcellation(stimuli_path, path_parcellation):
-    if os.path.isdir(stimuli_path):
-        stimuli_wav = [os.path.join(stimuli_path, seg) for seg in sorted(os.listdir(stimuli_path)) if seg[-4:] == '.wav']
-    else:
-        print("error - incorrect path")
-        return 0
-
+    stimuli_wav = [os.path.join(stimuli_path, seg) for seg in sorted(os.listdir(stimuli_path)) if seg[-4:] == '.wav']
     parcellation_list = [os.path.join(path_parcellation, mri_data) for mri_data in sorted(os.listdir(path_parcellation)) if mri_data[-4:]==".npz"]
     pair_wav_mri = []
     for i in range(len(stimuli_wav)):
@@ -86,8 +82,21 @@ def cNeuromod_subject_convention(path, name, zero_index = True):
 
     return 'sub'+str(num)
 
+def cNeuromod_stimuli_convention(path, name):
+    #name_model : sub-0X_ses-XXX_task-<sXXe/film><xxx>.wav
+    #path_model : your_path/DataBase/stimuli/dataset/<films, seasons>
+
+    name, ext = os.path.splitext(name)
+    film = os.path.basename(path)
+    dataset = os.path.basename(os.path.dirname(path))
+
+    run = name[-4:] if dataset == 'friends' else name[-2:]
+
+    new_name = dataset+'_'+film+run+ext
+    return new_name
+
 def cNeuromod_embeddings_convention(path, name):
-    #name_model : sub-0X_ses-XXX_task-<sXXe/film><xxx>
+    #name_model : sub-0X_ses-XXX_task-<sXXe/film><xxx>.npz
     #path_model : your_path/DataBase/fMRI_Embeddings/your_embedding/dataset/subject
 
     _, ext = os.path.splitext(name)
@@ -117,8 +126,8 @@ def cNeuromod_embeddings_convention(path, name):
     
     return new_name
 
-def rename_object(path, keyword_to_replace, rename_convention, objects=['dirs','files']):
-    for path, dirs, files in os.walk(path):
+def rename_objects_in_dataset(dataset_path, keyword_to_replace, rename_convention, objects=['dirs','files']):
+    for path, dirs, files in os.walk(dataset_path):
         for key_object in objects :
             if key_object == 'dirs':
                 key_list = dirs
@@ -134,8 +143,5 @@ def rename_object(path, keyword_to_replace, rename_convention, objects=['dirs','
 
 
 if __name__ == "__main__":
-    path_vox = "/home/maelle/DataBase/fMRI_Embeddings/auditory_Voxels/movie10"
-    rename_object(path_vox, 'run', cNeuromod_embeddings_convention, objects=['files'])
-
-    path_MIST = "/home/maelle/DataBase/fMRI_Embeddings/MIST_ROI/movie10"
-    rename_object(path_MIST, 'run', cNeuromod_embeddings_convention, objects=['files'])
+    path_vox = "/home/maelle/DataBase/stimuli/friends"
+    rename_objects_in_dataset(path_vox, 'friends_s', cNeuromod_stimuli_convention, objects=['files'])
