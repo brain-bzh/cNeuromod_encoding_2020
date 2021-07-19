@@ -73,3 +73,14 @@ class SoundNet8_pytorch(nn.Module):
         #object_pred = self.conv8(x)
         #scene_pred = self.conv8_2(x) 
         return x
+    
+    def extract_feat(self,x:torch.Tensor)->list:
+        output_list = []
+        for net in [self.conv1, self.conv2, self.conv3, self.conv4, self.conv5, self.conv6, self.conv7]:
+            x = net(x)
+            output_list.append(x.detach().cpu().numpy())
+        object_pred = self.conv8(x)
+        output_list.append(object_pred.detach().cpu().numpy())
+        scene_pred = self.conv8_2(x) 
+        output_list.append(scene_pred.detach().cpu().numpy())
+        return output_list
