@@ -7,7 +7,7 @@ import files_utils as fu
 #Create Dataset
 from random import sample
 from torch.utils.data import DataLoader
-from Datasets_utils import SequentialDataset, create_usable_audiofmri_datasets
+from Datasets_utils import SequentialDataset, create_usable_audiofmri_datasets, create_train_eval_dataset
 #Models
 from models import encoding_models as encod
 #Train & Test
@@ -46,8 +46,9 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     subject = data_selection['subject']
     train_data = all_subs_files[data_selection['train_data']]
     eval_data = all_subs_files[data_selection['eval_data']]
-    #film = data_selection['film']
-    #sessions = data_selection['sessions']
+    #film = data_selection['film']/
+    sessions_train = data_selection['sessions_train']
+    sessions_eval = data_selection['sessions_eval']
 
     scale = data_processing['scale']
     tr = data_processing['tr']
@@ -75,6 +76,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     power_transform = training_hyperparameters['power_transform']
     lr_scheduler = training_hyperparameters['lr_scheduler']
     train_pass = training_hyperparameters['train_pass']
+
     #es_criterion = training_hyperparameters['early_stopping']
 
     #warm_restart = training_hyperparameters['warm_restart'] àtester
@@ -83,7 +85,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     #to look how to implement a more interactable early_stopping
 
     #----------define-paths-and-names----------------------
-    outfile_name = +str(scale)+'_'+str(model.__name__)+'_'+str(fmrihidden)+'_ks'+str(kernel_size)+'_lr'+str(lr)+'_wd'+str(weight_decay)+'_'
+    outfile_name = str(scale)+'_'+str(model.__name__)+'_'+str(fmrihidden)+'_ks'+str(kernel_size)+'_lr'+str(lr)+'_wd'+str(weight_decay)+'_'
     outfile_name = outfile_name+'decoupled_' if decoupled_weightDecay else outfile_name
     outfile_name = outfile_name+'trainPass_' if train_pass else outfile_name
     outfile_name = outfile_name+'lrSch_' if lr_scheduler else outfile_name
@@ -92,41 +94,25 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
     #------------------select data (dataset, films, sessions/seasons)
 
-    #----------WIP----------------------------------
-    DataTrain = [(data[0], data[1]) for data in train_data]
-    DataTest = [(data[0], data[1]) for data in eval_data]
+    train_input = [(data[0], data[sessions_train]) for data in train_data]
+    eval_input = [(data[0], data[sessions_eval]) for data in eval_data]
 
-    print(f'lenght of DataTrain : ', len(DataTrain))
-    print(f'lenght of DataTest : ', len(DataTest))
+    DataTrain, DataVal, DataTest = create_train_eval_dataset(train_input, eval_input, train_percent, val_percent, test_percent)
 
     xTrain, yTrain = create_usable_audiofmri_datasets(DataTrain, tr, sr, name='training')
     TrainDataset = SequentialDataset(xTrain, yTrain, batch_size=batchsize, selection=selected_ROI)
-    total_train_len = len(TrainDataset)
-    train_len = int(np.floor(train_percent*total_train_len))
-    #if same dataset for training and testing
-    if len(DataTest)==0:
-        val_len = int(np.floor(val_percent*total_train_len))
-        test_len = total_train_len-train_len-val_len
-    #if separete datasets for training and testing
-    else:
-        xTest, yTest = create_usable_audiofmri_datasets(DataTest, tr, sr, name='test')
-        TestDataset = SequentialDataset(xTest, yTest, batch_size=batchsize, selection=selected_ROI)
-        total_test_len = len(TestDataset)
-        val_len = int(np.floor(val_percent*total_test_len))
-        test_len = total_test_len-val_len
+    trainloader = DataLoader(TrainDataset, batch_size=None)
 
-    print(f'size of train, val and set : ', train_len, test_len, val_len)
+    xVal, yVal = create_usable_audiofmri_datasets(DataVal, tr, sr, name='validation')
+    ValDataset = SequentialDataset(xVal, yVal, batch_size=batchsize, selection=selected_ROI)
+    valloader = DataLoader(ValDataset, batch_size=None)
 
-    loader = list(DataLoader(TrainDataset, batch_size=None))
-    trainloader = sample(loader[:train_len], k=train_len)
+    xTest, yTest = create_usable_audiofmri_datasets(DataTest, tr, sr, name='test')
+    TestDataset = SequentialDataset(xTest, yTest, batch_size=batchsize, selection=selected_ROI)
+    testloader = DataLoader(TestDataset, batch_size=None)
 
-    if len(DataTest)==0:
-        valloader = sample(loader[train_len:train_len+val_len], k=val_len)
-        testloader = sample(loader[train_len+val_len:train_len+val_len+test_len], k=test_len)
-    else : 
-        second_loader = list(DataLoader(TestDataset, batch_size=None))
-        valloader = sample(second_loader[:val_len], k=val_len)
-        testloader = sample(second_loader[val_len:], k=test_len)
+    print(f'size of train, val and set : ', len(TrainDataset), len(ValDataset), len(TestDataset))
+    return 0
 
     #|--------------------------------------------------------------------------------------------------------------------------------------
     ### Model Setup
@@ -266,7 +252,8 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--sub", type=str)
     parser.add_argument("-d", "--dataset", type=str)
     #parser.add_argument("-f", "--film", type=str, default='')
-    #parser.add_argument("--sessions", type=str, nargs='+', default=None)
+    parser.add_argument("--sessions_train", type=int, default=1)
+    parser.add_argument("--sessions_eval", type=int, default=1)
     parser.add_argument("--trainData", type=str, default='')
     parser.add_argument("--evalData", type=str, default='')
 
@@ -284,9 +271,9 @@ if __name__ == "__main__":
 
     #training_hyperparameters
     parser.add_argument("--es", type=str)
-    parser.add_argument("--train100", type=float, default=1.0)
-    parser.add_argument("--test100", type=float, default=0.5)
-    parser.add_argument("--val100", type=float, default=0.5)
+    parser.add_argument("--train100", type=float, default=0.6)
+    parser.add_argument("--test100", type=float, default=0.2)
+    parser.add_argument("--val100", type=float, default=0.2)
     parser.add_argument("--gpu", dest='gpu', action='store_true')
     parser.add_argument("--lr", type=float, default=10)
     parser.add_argument("--nbepoch", type=int, default=200)
@@ -301,9 +288,10 @@ if __name__ == "__main__":
         'subject':int(args.sub),
         'dataset':args.dataset,
         'train_data':args.trainData,
-        'eval_data':args.evalData
+        'eval_data':args.evalData,
+        'sessions_train' : args.sessions_train,
+        'sessions_eval' : args.sessions_eval
         #'film':args.film,
-        #'sessions':args.sessions
     }
     ds = data_selection
 
@@ -354,9 +342,6 @@ if __name__ == "__main__":
         film_path = os.path.join(dataset_path, film)
         if os.path.isdir(film_path):
             all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
-    #ds['film'] = 'all'
-    # else : 
-    #     all_subs_files = fu.associate_stimuli_with_Parcellation(dataset_path, parcellation_path)
 
     resultpath = outpath+dt_string+"test_{}_lr0.01_{}epochs".format(dp['scale'], th['nbepoch'])
     resultpath = os.path.join(resultpath, 'sub-'+args.sub)

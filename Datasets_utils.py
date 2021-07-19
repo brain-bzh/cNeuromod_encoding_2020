@@ -6,6 +6,43 @@ import librosa
 from torch.utils.data import IterableDataset
 import torch
 
+def create_train_eval_dataset(train_input, eval_input, train_percent, val_percent, test_percent):
+
+    same_train_eval_datasets = True
+    for (train_x, train_y), (eval_x, eval_y) in zip(train_input, eval_input):
+       if train_x != eval_x or train_y != eval_y:
+           same_train_eval_datasets = False
+           break
+
+    if same_train_eval_datasets : 
+        train_len = int(np.floor(train_percent*len(train_input))) 
+        test_len = int(np.floor(test_percent*len(train_input)))
+        val_len = len(train_input)- train_len - test_len if train_percent+val_percent+test_percent >= 1 else int(np.floor(val_percent*len(train_input)))
+        s = 'The dataset for training and for evaluation is the same.\
+        \nTraining will be done on {} runs, validation on {} runs and testing on {} runs from the same dataset'.format(train_len, val_len, test_len)
+        DataTrain = train_input[:train_len]
+        DataVal = train_input[train_len:train_len+val_len]
+        DataTest = train_input[train_len+val_len:train_len+val_len+test_len]
+    
+    else :
+        train_len = int(np.floor(train_percent*len(train_input)/(train_percent+val_percent)))
+        val_len = len(train_input)-train_len if train_percent+val_percent+test_percent >= 1 else int(np.floor(val_percent*len(train_input)))
+        #to verify if it works ...
+        if val_len > len(eval_input):
+            test_len = len(eval_input)
+        elif train_percent+val_percent+test_percent == 1:
+            test_len = val_len 
+        else: 
+            test_len = int(np.floor(test_percent*len(eval_input)))    
+        s = 'The datasets for training and for evaluation are different.\
+        \nTraining will be done on {} runs and validation on {} runs from the training dataset, and testing will be done on {} runs from the eval dataset'.format(train_len, val_len, test_len)
+        DataTrain = train_input[:train_len]
+        DataVal = train_input[train_len:train_len+val_len]
+        DataTest = eval_input[:test_len]
+
+    print(s)
+    return DataTrain, DataVal, DataTest
+
 class SequentialDataset(IterableDataset):
     def __init__(self, x, y, batch_size, selection = None):
         super(SequentialDataset).__init__()
