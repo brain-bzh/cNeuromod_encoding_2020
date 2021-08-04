@@ -3,6 +3,8 @@ import torch.nn as nn
 from nistats import hemodynamic_models
 import numpy as np
 
+#adapted from https://github.com/smallflyingpig/SoundNet_Pytorch
+
 class SoundNet8_pytorch(nn.Module):
     def __init__(self, output_layer = 7, train_limit = 5):
         super(SoundNet8_pytorch, self).__init__()
@@ -69,9 +71,9 @@ class SoundNet8_pytorch(nn.Module):
                 x = net(x)
 
         ### "Truncated" soundnet to only extract conv7 
-
         #object_pred = self.conv8(x)
         #scene_pred = self.conv8_2(x) 
+
         return x
     
     def extract_feat(self,x:torch.Tensor)->list:
