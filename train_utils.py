@@ -29,10 +29,10 @@ class EarlyStopping:
         if self.best_score is None:
             self.best_score = score
             self.save_checkpoint(val_loss, model)
-        elif score < self.best_score + self.delta:
+        elif score <= self.best_score + self.delta:
             self.counter += 1
             print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
-            if self.counter >= self.patience:
+            if self.counter > self.patience:
                 self.early_stop = True
         else:
             self.best_score = score
@@ -47,19 +47,17 @@ class EarlyStopping:
         self.val_loss_min = val_loss
 
 
-def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
+def train(trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
     all_y = []
     all_y_predicted = []
     running_loss = 0
-    #------------------------to CHECK with Nicolas---------------------------------------
-    #net.soundnet.eval()
-    #net.encoding_fmri.train()
-    #------------------------------------------------------------------------------------
     net.train()
 
     for batch_nb, (x, y) in enumerate(trainloader):
+        #print(f'batch n°', batch_nb)
         optimizer.zero_grad()
         batch_size = x.shape[0]
+        #print(f'   batch size (x.shape[0]) : ', batch_size)
 
         # for 1D output
         #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)
@@ -71,10 +69,14 @@ def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
         # Forward pass
         predicted_y = net(x)
         predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()# as some dimensions in the output 
+        #print(f'   len(predicted_y) : ', len(predicted_y))        
+        
         predicted_y = predicted_y[:batch_size]                #FOR AUDIO ONLY : Cropping the end of the predicted fmri to match the measured bold
         #print(f'predicted_y after squeezing and cutting to the same size as fmri data: ', predicting_y)
-
+        #print(f'   len(predicted_y) after crop: ', len(predicted_y))
+        
         y = y.double()
+        #print(f'   len(real_y): ', len(y))
         if gpu:
             y = y.cuda()
         #print(f"y_real shape : ", y.shape, "and y_predicted shape : ", predicted_y.shape)         # both must have the same shape
@@ -89,7 +91,7 @@ def train(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
     r2_model = r2_score(np.vstack(all_y),np.vstack(all_y_predicted),multioutput='raw_values') 
     return running_loss/batch_nb, r2_model
 
-def train_without_grad(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
+def train_without_grad(trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
     all_y = []
     all_y_predicted = []
     running_loss = 0
@@ -97,8 +99,10 @@ def train_without_grad(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=T
 
     with torch.no_grad() : 
         for batch_nb, (x, y) in enumerate(trainloader):
+            print(f'batch n°', batch_nb)
             optimizer.zero_grad()
             batch_size = x.shape[0]
+            print(f'   batch size (x.shape[0]) : ', batch_size)
 
             # for 1D output 
             x =  torch.Tensor(x).view(1,1,-1, 1) 
@@ -107,8 +111,11 @@ def train_without_grad(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=T
             # Forward pass
             predicted_y = net(x)
             predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()
+            print(f'   len(predicted_y) : ', len(predicted_y))
             predicted_y = predicted_y[:batch_size]
+            print(f'   len(predicted_y) after crop: ', len(predicted_y))
             y = y.double()
+            print(f'   len(real_y): ', len(y))
             if gpu:
                 y = y.cuda()
 
@@ -124,7 +131,7 @@ def train_without_grad(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=T
 
 
 
-def test(epoch,trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
+def test(trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
     all_y = []
     all_y_predicted = []
     running_loss = 0

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pickle
 import torch
-from torch import load, device
+from torch import load
 
 from nilearn import image, plotting, datasets, surface
 from nilearn.plotting import plot_stat_map, view_img, view_img_on_surf
@@ -51,9 +51,13 @@ for result_dir in results_dir:
                 if file_name[-3:] == '.pt':
                     file_path = os.path.join(test_path, file_name)
                     data = load(file_path)
-                    x = np.array(data[metric])
+                    x = data[metric]
+                    i_min = x.index(min(x))
+                
                     plt.plot(x)
-
+                    plt.annotate(str(round(x[i_min], 2)), (i_min, x[i_min]), xytext=(0, 10), 
+                    textcoords='offset points', arrowprops=dict(arrowstyle="-"))
+                    
 
             plt.legend(test)
             #plt.subplots_adjust(left=0.05, bottom=0.1, right=0.9, top=0.9, wspace=0.4, hspace=0.4)

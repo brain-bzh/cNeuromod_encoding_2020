@@ -19,50 +19,47 @@ from nilearn.plotting import plot_stat_map
 from nilearn.regions import signals_to_img_labels
 from matplotlib import pyplot as plt 
 
-all_films = {
-    'bourne':'bourne_supremacy',
-    'wolf':'wolf_of_wall_street',
-    'life':'life',
-    'hidden':'hidden_figures',
-}
+# all_early_stopping_criterions = {
+#     'train_loss':0, 
+#     'train_r2_max':1,
+#     'train_r2_mean':2,
+#     'val_loss':3, 
+#     'val_r2_max':4,
+#     'val_r2_mean':5
+# }
 
-all_criterions = {
-    'train_loss':0, 
-    'train_r2_max':1,
-    'train_r2_mean':2,
-    'val_loss':3, 
-    'val_r2_max':4,
-    'val_r2_mean':5
-}
-
-def model_training(outpath, data_selection, data_processing, training_hyperparameters):
+def model_training(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis):
     checkpt_still_here = os.path.lexists('checkpoint.pt')
     if checkpt_still_here : 
         print('suppression of checkpoint file')
         os.remove('checkpoint.pt')
 
-    #define arguments
+    #data selection
     all_subs_files = data_selection['all_data']
     subject = data_selection['subject']
     train_data = all_subs_files[data_selection['train_data']]
     eval_data = all_subs_files[data_selection['eval_data']]
-    #film = data_selection['film']/
     sessions_train = data_selection['sessions_train']
     sessions_eval = data_selection['sessions_eval']
 
+    #data processing
     scale = data_processing['scale']
     tr = data_processing['tr']
     sr = data_processing['sr']
-    selected_ROI =data_processing['selected_ROI']
-    if scale == 'MIST_ROI':
+    selected_inputs =data_processing['selected_inputs']
+    if selected_inputs != None : 
+        nInputs = len(selected_inputs)
+    elif scale == 'MIST_ROI':
         nInputs = 210
     elif scale == 'auditory_Voxels':
         nInputs = 556
 
-    diff_TrainTest = training_hyperparameters['diff_sess_for_train_test']
+    #training_parameters
     model = training_hyperparameters['model']
     fmrihidden = training_hyperparameters['fmrihidden']
     kernel_size = training_hyperparameters['kernel_size']
+    patience_es = training_hyperparameters['patience']
+    delta_es = training_hyperparameters['delta']
     gpu = training_hyperparameters['gpu']
     batchsize = training_hyperparameters['batchsize']
     lr = training_hyperparameters['lr']
@@ -75,21 +72,17 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     decoupled_weightDecay = training_hyperparameters['decoupled_weightDecay']
     power_transform = training_hyperparameters['power_transform']
     lr_scheduler = training_hyperparameters['lr_scheduler']
-    train_pass = training_hyperparameters['train_pass']
-
-    #es_criterion = training_hyperparameters['early_stopping']
-
-    #warm_restart = training_hyperparameters['warm_restart'] àtester
-    #early_stopping = training_hyperparameters['early_stopping']
-    #problem, that stop the training of any following test
-    #to look how to implement a more interactable early_stopping
+    
+    #WIP_conditions :
+    #train_pass = training_hyperparameters['train_pass']
+    #warm_restart = training_hyperparameters['warm_restart']
 
     #----------define-paths-and-names----------------------
     outfile_name = str(scale)+'_'+str(model.__name__)+'_'+str(fmrihidden)+'_ks'+str(kernel_size)+'_lr'+str(lr)+'_wd'+str(weight_decay)+'_'
     outfile_name = outfile_name+'decoupled_' if decoupled_weightDecay else outfile_name
-    outfile_name = outfile_name+'trainPass_' if train_pass else outfile_name
     outfile_name = outfile_name+'lrSch_' if lr_scheduler else outfile_name
     outfile_name = outfile_name+'pt_' if power_transform else outfile_name
+    #WIP : outfile_name = outfile_name+'trainPass_' if train_pass else outfile_name
     destdir = outpath
 
     #------------------select data (dataset, films, sessions/seasons)
@@ -100,19 +93,18 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     DataTrain, DataVal, DataTest = create_train_eval_dataset(train_input, eval_input, train_percent, val_percent, test_percent)
 
     xTrain, yTrain = create_usable_audiofmri_datasets(DataTrain, tr, sr, name='training')
-    TrainDataset = SequentialDataset(xTrain, yTrain, batch_size=batchsize, selection=selected_ROI)
+    TrainDataset = SequentialDataset(xTrain, yTrain, batch_size=batchsize, selection=selected_inputs)
     trainloader = DataLoader(TrainDataset, batch_size=None)
 
     xVal, yVal = create_usable_audiofmri_datasets(DataVal, tr, sr, name='validation')
-    ValDataset = SequentialDataset(xVal, yVal, batch_size=batchsize, selection=selected_ROI)
+    ValDataset = SequentialDataset(xVal, yVal, batch_size=batchsize, selection=selected_inputs)
     valloader = DataLoader(ValDataset, batch_size=None)
 
     xTest, yTest = create_usable_audiofmri_datasets(DataTest, tr, sr, name='test')
-    TestDataset = SequentialDataset(xTest, yTest, batch_size=batchsize, selection=selected_ROI)
+    TestDataset = SequentialDataset(xTest, yTest, batch_size=batchsize, selection=selected_inputs)
     testloader = DataLoader(TestDataset, batch_size=None)
 
     print(f'size of train, val and set : ', len(TrainDataset), len(ValDataset), len(TestDataset))
-    return 0
 
     #|--------------------------------------------------------------------------------------------------------------------------------------
     ### Model Setup
@@ -128,10 +120,9 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
         optimizer = optim.Adam(net.parameters(), lr = lr, weight_decay=weight_decay)
 
     if lr_scheduler : 
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
-    early_stopping = EarlyStopping(patience=10, verbose=True,delta=0)
-    enddate = datetime.now()
+    early_stopping = EarlyStopping(patience=patience_es, verbose=True,delta=delta_es)
 
     #---------------------------------------------------------------------------------------------------------------------------------
     #5 - Train & Test
@@ -151,39 +142,54 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     try:
         for epoch in tqdm(range(nbepoch)):
 
-            t_l, t_r2 = train(epoch,trainloader,net,optimizer,mseloss=mseloss, gpu=gpu)
+            t_l, t_r2 = train(trainloader,net,optimizer,mseloss=mseloss, gpu=gpu)
             train_loss.append(t_l)
             train_r2_max.append(max(t_r2))
             train_r2_mean.append(np.mean(t_r2))
 
-            v_l, v_r2 = test(epoch,valloader,net,optimizer,mseloss=mseloss, gpu=gpu)
+            v_l, v_r2 = test(valloader,net,optimizer,mseloss=mseloss, gpu=gpu)
             val_loss.append(v_l)
             val_r2_max.append(max(v_r2))
             val_r2_mean.append(np.mean(v_r2))
+            
+            lrs.append(optimizer.param_groups[0]["lr"])
+
             print("Train Loss {} Train Mean R2 :  {} Train Max R2 : {}, Val Loss {} Val Mean R2:  {} Val Max R2 : {} ".format(train_loss[-1],train_r2_mean[-1],train_r2_max[-1],val_loss[-1],val_r2_mean[-1],val_r2_max[-1]))
 
-            # early_stopping needs the R2 mean to check if it has increased, 
-            # and if it has, it will make a checkpoint of the current model
-            
-            #r2_forEL = -(val_r2_max[-1])
-            lrs.append(optimizer.param_groups[0]["lr"])
+            if ml_analysis == 'wandb':
+                wandb.log({"train loss": t_l, "train r2 max": max(t_r2), "train r2 mean":np.mean(t_r2),
+                            "val loss": v_l, "val r2 max": max(v_r2), "val r2 mean":np.mean(v_r2),
+                            "learning rate" : optimizer.param_groups[0]["lr"], "nb epochs": epoch
+                })
+            elif ml_analysis == 'comet':
+                pass
+            else : 
+                pass
+
             if lr_scheduler : 
-                scheduler.step()
+                scheduler.step(v_l)
 
             early_stopping(v_l, net)
-
             if early_stopping.early_stop:
                 print("Early stopping")
                 break
 
     except KeyboardInterrupt:
         print("Interrupted by user")
-    
-    if train_pass:
-        test(1,testloader,net,optimizer,mseloss=mseloss, gpu=gpu)
-
-    test_loss, final_model = test(1,testloader,net,optimizer,mseloss=mseloss, gpu=gpu)
+        
+    # WIP : 
+    # if train_pass:
+    #     test(1,testloader,net,optimizer,mseloss=mseloss, gpu=gpu)
+    enddate = datetime.now()
+    test_loss, final_model = test(testloader,net,optimizer,mseloss=mseloss, gpu=gpu)
     print("Test Loss : {}".format(test_loss))
+    
+    if ml_analysis == 'wandb':
+        wandb.log({"test loss": test_loss, "test r2 max": max(final_model), "test r2 mean":np.mean(final_model)})
+    elif ml_analysis == 'comet':
+        pass
+    else : 
+        pass
 
     #6 - Save Model
 
@@ -220,7 +226,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
                 'training_time' : enddate - startdate,
                 'nhidden' : fmrihidden,
                 'model' : net,
-                'selected ROI': selected_ROI,
+                'selected ROI': selected_inputs,
                 'lrs' : lrs
             }
 
@@ -242,7 +248,6 @@ if __name__ == "__main__":
     date = datetime.now()
     dt_string = date.strftime("%Y%m%d")
 
-    #bash command example : python  model_training.py -s 01 -d <friends, movie10> -f <None, Bourne, Hidden, Life, Wolf, All> --scale <MIST_ROI, auditory_Voxels>
     #bash command example : python  model_training.py -s 01 -d friends --trainData s01 --evalData s02 --scale auditory_Voxels
     #bash command example : python  model_training.py -s 01 -d movie10 --trainData wolf --evalData bourne --scale MIST_ROI
 
@@ -251,47 +256,53 @@ if __name__ == "__main__":
     #data_selection
     parser.add_argument("-s", "--sub", type=str)
     parser.add_argument("-d", "--dataset", type=str)
-    #parser.add_argument("-f", "--film", type=str, default='')
-    parser.add_argument("--sessions_train", type=int, default=1)
-    parser.add_argument("--sessions_eval", type=int, default=1)
+    parser.add_argument("--sessions_train", type=int, default=1) # WIP, must be >=1, add a condition to check the entry
+    parser.add_argument("--sessions_eval", type=int, default=1) # WIP, must be >=1, add a condition to check the entry
     parser.add_argument("--trainData", type=str, default='')
     parser.add_argument("--evalData", type=str, default='')
 
     #data_processing
     parser.add_argument("--scale", type=str)
-    #parser.add_argument("--nInputs", type=int)
+    parser.add_argument("--select", type=int, nargs='+', default=None) # in case we want to learn on specific ROI/Voxels
     parser.add_argument("--tr", type=float, default=1.49)
     parser.add_argument("--sr", type=int, default=22050)
-    parser.add_argument("--select", type=int, nargs='+', default=None)
 
     #model_parameters
-    parser.add_argument("--hidden_size", type=int, default=1000)
+    parser.add_argument("--hs", type=int, default=1000)
     parser.add_argument("--bs", type=int, default=30)
     parser.add_argument("--ks", type=int, default=5)
 
     #training_hyperparameters
-    parser.add_argument("--es", type=str)
+        #early_stopping
+    parser.add_argument("--patience", type=int, default=15)
+    parser.add_argument("--delta", type=float, default=0)
+        #dataset_size    
     parser.add_argument("--train100", type=float, default=0.6)
     parser.add_argument("--test100", type=float, default=0.2)
     parser.add_argument("--val100", type=float, default=0.2)
+        #other
     parser.add_argument("--gpu", dest='gpu', action='store_true')
-    parser.add_argument("--lr", type=float, default=10)
+    parser.add_argument("--lr", type=float, default=1)
     parser.add_argument("--nbepoch", type=int, default=200)
     parser.add_argument("--wd", type=float, default=1e-2)
     parser.add_argument("--decoupledWD", dest='decoupledWD', action='store_true')
     parser.add_argument("--powerTransform", dest='powerTransform', action='store_true')
     parser.add_argument("--lrScheduler", dest='lrScheduler', action='store_true')
-    parser.add_argument("--trainPass", dest='trainPass', action='store_true')
+    # WIP : parser.add_argument("--trainPass", dest='trainPass', action='store_true')
+
+    #ML_analysis
+    parser.add_argument("--wandb", dest='wandb', action='store_true')
+    parser.add_argument("--comet", dest='comet', action='store_true')
 
     args = parser.parse_args()
+
     data_selection = {
-        'subject':int(args.sub),
-        'dataset':args.dataset,
-        'train_data':args.trainData,
-        'eval_data':args.evalData,
+        'subject' : int(args.sub),
+        'dataset' : args.dataset,
+        'train_data' : args.trainData,
+        'eval_data' : args.evalData,
         'sessions_train' : args.sessions_train,
         'sessions_eval' : args.sessions_eval
-        #'film':args.film,
     }
     ds = data_selection
 
@@ -299,20 +310,18 @@ if __name__ == "__main__":
         'scale': args.scale,
         'tr' : args.tr,
         'sr' : args.sr,
-        'selected_ROI': args.select
-        #'nInputs': args.nInputs                          
+        'selected_inputs': args.select                     
     }
     dp = data_processing
 
     training_hyperparameters = {
         'model':encod.SoundNetEncoding_conv,
-        'diff_sess_for_train_test':True,
         'mseloss':nn.MSELoss(reduction='sum'),
-
-        #'early_stopping':all_criterions[args.es],
-        'fmrihidden':args.hidden_size,
+        'fmrihidden':args.hs,
         'batchsize':args.bs,
         'kernel_size':args.ks,
+        'patience':args.patience,
+        'delta':args.delta, 
         'train_percent':args.train100,
         'test_percent':args.test100,
         'val_percent':args.val100,
@@ -323,11 +332,25 @@ if __name__ == "__main__":
         'decoupled_weightDecay' : args.decoupledWD,
         'power_transform' : args.powerTransform,
         'lr_scheduler' : args.lrScheduler,
-        'train_pass' : args.trainPass
+        # WIP : 'train_pass' : args.trainPass
     }
     th = training_hyperparameters
 
     #-------------------------------------------------------------
+    ml_analysis = ''
+    if args.wandb :
+        #os.environ['WANDB_MODE'] = 'offline'
+        print("wandb")
+        import wandb 
+        wandb.init(project="neuroencoding_audio", config={})
+        wandb.config.update(args)
+        print("update config okay")
+        ml_analysis += 'wandb'
+
+    elif args.comet : 
+        import comet_ml
+        experiment = comet_ml.Experiment("1NT8FqmXsAH088rHLBYC1Yyev")
+        ml_analysis += 'comet'
 
     outpath = '/home/maelle/Results/' #"/home/maellef/Results/"
     stimuli_path = '/home/maelle/DataBase/stimuli' #'/home/maellef/DataBase/stimuli'
@@ -336,17 +359,21 @@ if __name__ == "__main__":
     dataset_path = os.path.join(stimuli_path, ds['dataset'])
     parcellation_path = os.path.join(embed_path, dp['scale'], ds['dataset'], 'sub-'+args.sub)
 
-    # if ds['film'] == '' :
     all_subs_files = dict()
     for film in os.listdir(dataset_path):
         film_path = os.path.join(dataset_path, film)
         if os.path.isdir(film_path):
             all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
 
-    resultpath = outpath+dt_string+"test_{}_lr0.01_{}epochs".format(dp['scale'], th['nbepoch'])
+    resultpath = outpath+dt_string+"verify_train_{}_lr0.01_{}epochs".format(dp['scale'], th['nbepoch'])
     resultpath = os.path.join(resultpath, 'sub-'+args.sub)
     os.makedirs(resultpath, exist_ok=True)
     
     ds['all_data']=all_subs_files
-    model_training(resultpath, ds, dp, th)
+    model_training(resultpath, ds, dp, th, ml_analysis)
+
+    if args.wandb :
+        wandb.finish()
+    elif args.comet : 
+        pass
 
