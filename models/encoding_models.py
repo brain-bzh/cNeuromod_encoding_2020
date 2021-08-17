@@ -5,38 +5,40 @@ import numpy as np
 from models import soundnet_model as snd
  
 class SoundNetEncoding_conv(nn.Module):
-    def __init__(self,pytorch_param_path,out_size,fmrihidden=1000, kernel_size = 1, output_layer = 7, train_limit = 7, nroi_attention=None, power_transform=False, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,transfer=True,preload=True):
+    def __init__(self,pytorch_param_path,out_size,fmrihidden=1000, kernel_size = 1, output_layer = "conv7", train_start = None, 
+                nroi_attention=None, power_transform=False, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0,
+                preload=True):
         super(SoundNetEncoding_conv, self).__init__()
 
-        self.soundnet = snd.SoundNet8_pytorch(output_layer, train_limit)
+        self.soundnet = snd.SoundNet8_pytorch()
         self.fmrihidden = fmrihidden
         self.out_size = out_size
-        self.power_transform = power_transform
+        self.train_start = train_start
+        self.output_layer = output_layer
         self.layers_features = {}
+        self.power_transform = power_transform
 
         if preload:
             print("Loading SoundNet weights...")
             # load pretrained weights of original soundnet model
             self.soundnet.load_state_dict(torch.load(pytorch_param_path))
-            print("Pretrained model loaded")
-            if transfer:
-                #freeze the parameters of soundNet up to desired training layer 
-                # (here we want to train layer 6  and following so we freeze up to layer 5)
-                print("Transfer learning - backbone is fixed")
-                for layer, param in enumerate(self.soundnet.parameters()):
-                    if layer < (train_limit)*4 :
-                        param.requires_grad = False
-                    else : 
-                        param.requires_grad = True
-            else:
-                print("Finetuning : backbone will be optimized")
 
-        self.encoding_fmri = nn.Sequential(                
-                nn.Conv1d(1024,self.out_size,kernel_size=(kernel_size,1), padding=(kernel_size-1,0)),
-                #nn.ReLU(inplace=True),
-                #nn.Conv2d(self.fmrihidden,self.out_size,kernel_size=(1,1)),
+            #freeze the parameters of soundNet up to desired training layer 
+            print("Transfer learning - backbone is fixed")
+            paramaters_name = [] 
+            for layer_weights in self.soundnet.state_dict() : 
+                if layer_weights.find('weight') > -1 or layer_weights.find('bias') > -1 : 
+                    paramaters_name.append(layer_weights)
 
-            )
+            train_limit = "conv5"
+            for name, param in zip(paramaters_name, soundnet.parameters()):
+                if name.find(train_limit)>-1 : 
+                    break
+                param.requires_grad = False
+        else:
+            print("Finetuning : backbone will be optimized")
+
+        self.encoding_fmri = nn.Conv1d(1024,self.out_size,kernel_size=(kernel_size,1), padding=(kernel_size-1,0))
 
         if nroi_attention is not None:
             self.maskattention = torch.nn.Parameter(torch.rand(out_size,nroi_attention))
@@ -53,7 +55,7 @@ class SoundNetEncoding_conv(nn.Module):
             self.hrf_model=None
 
     def forward(self, x):
-        emb = self.soundnet(x)
+        emb = self.soundnet(x, self.output_layer, self.train_start)
         if self.power_transform:
             emb = torch.sqrt(emb)
         out = self.encoding_fmri(emb)
@@ -75,7 +77,7 @@ class SoundNetEncoding_conv(nn.Module):
  
         return output_list
 
-#-----------------------------------------------------------------------------------
+#---WIP---------------------------------------------------------------
 
 class SoundNetEncoding(nn.Module):
     def __init__(self,pytorch_param_path,nroi=210,fmrihidden=1000,nroi_attention=None, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0):
@@ -257,3 +259,5 @@ class SoundNetEncoding_conv_3(nn.Module):
         out = self.encoding_fmri(emb)
         
         return out
+
+#---END-WIP---------------------------------------------------------------
