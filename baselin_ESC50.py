@@ -1,7 +1,7 @@
- #Pour esc50, pourrais tu préparer la baseline, qui consiste en extraire les vecteurs avec SoundNet original sans finetuning, 
- #puis faire la classification ? Je voudrais relire ça pour te faire un retour
 import os
-import tqdm
+from librosa.core import audio
+from torch.functional import norm
+from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import librosa
@@ -9,31 +9,52 @@ import torch
 import sklearn
 from sklearn import svm
 from sklearn.model_selection import GridSearchCV
-from sklearn.preprocessing import normalize, scale
+from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import normalize, scale,StandardScaler
+from sklearn.metrics import classification_report
 from scipy.signal import resample
-
+from umap import UMAP
+from matplotlib import pyplot as plt
 from models import soundnet_model as snd
+import argparse
 
-esc_datapath = "/home/maelle/DataBase/ESC-50-master/audio"
-pytorch_param_path = './sound8.pth'
 
-df_esc50 = pd.read_csv('/home/maelle/DataBase/ESC-50-master/meta/esc50.csv')
+parser = argparse.ArgumentParser()
+parser.add_argument("--esc", type=str,default="/home/maelle/DataBase/ESC-50-master/",help="Path to the ESC-50 folder (must be cloned from https://github.com/karolpiczak/ESC-50 )")
+parser.add_argument("--checkpoint","-c", type=str,default='./sound8.pth',help="Path to soundnet checkpoint to load, default is the trained soundnet from the paper")
+parser.add_argument("--dataset", type=str,default='esc10',choices=['esc10','esc50'],help="esc10 or esc50")
+parser.add_argument("--layer", type=str,default='conv6',choices=['conv1', 'pool1', 'conv2', 'pool2' , 'conv3' , 'conv4' , 
+                            'conv5', 'pool5', 'conv6', 'conv7'],help="Choose soundnet layer to train from")
+
+parser.add_argument("--classif", type=str,default='mlp',choices=['svm', 'mlp', 'knn'],help="Choose classifer (SVM, MLP, KNN)")
+
+args = parser.parse_args()
+### See here https://github.com/nicofarr/paper-2015-esc-dataset/tree/master/Notebook for baseline results using MFCC extracted features 
+### including results and code (notebook with lots of graphs / details)
+
+esc_datapath = args.esc + '/audio/' #"/home/nfarrugi/git/ESC-50/audio/"
+pytorch_param_path = args.checkpoint
+
+df_esc50 = pd.read_csv(os.path.join(args.esc , 'meta/esc50.csv'))
 df_esc10 = df_esc50[df_esc50["esc10"] == True]
-dataset = df_esc10
+
+if args.dataset == 'esc10':
+    dataset = df_esc10
+    print("Training on ESC10")
+else:
+    dataset = df_esc50
+    print("Training on ESC50")
 
 offset = 0 #starting point for audio
 #The data is prearranged into 5 folds and the accuracy results are reported as the mean of 5 leave-one-fold-out evaluations.
 
-#à checker
-#sklearn preprocessing scale or normalize ?
-#label majoritaire -> 3 steps : get all predict for 1 second + real_y, label majo, accuracy
-
 soundnet = snd.SoundNet8_pytorch()
 soundnet.load_state_dict(torch.load(pytorch_param_path))
-output_layer = 'conv6' #output de pool5
-overlap = 5
+output_layer = args.layer #output de pool5
+sr_soundnet = 22050
 
-#parameter_grid = {'C':[1e-2, 1e-1, 1, 10]}
+parameter_grid = {'C':[1e-2,1e-1,1]}
 
 #------category_labels--------------------------------------------------------------
 target_labels = pd.DataFrame([dataset['target'], dataset['category']]).T.drop_duplicates().sort_values(by=['target']).reset_index(drop=True)
@@ -46,25 +67,52 @@ train_scores = []
 test_scores = []
 
 #---------------creation of X-Y pairs---------------------------------------
-for filename, target, fold in tqdm.tqdm(zip(dataset['filename'], dataset['target'], dataset['fold'])) : 
+for filename, target, fold in tqdm(zip(dataset['filename'], dataset['category'], dataset['fold']),total=len(dataset['filename'])) : 
     filepath = os.path.join(esc_datapath, filename)
     audio_x, sr = librosa.core.load(filepath, sr=None, offset = offset)
     length = librosa.get_duration(audio_x,sr)
-    x = resample(audio_x, int(length)*22050)
+    x = 256*resample(audio_x, int(length)*sr_soundnet) ### Range in the SoundNet paper is [-256,256]
     
-    #------------data augmentation---------------------------------------------
+    """
+    sub_x = torch.tensor(x).view(1,1,-1, 1)
+    sub_x = soundnet(sub_x, output_layer)
+    sub_x = torch.squeeze(sub_x).T
+    #sub_x = sub_x.reshape(-1)
+    sub_x = torch.mean(sub_x,0)
+    folds[fold].append((sub_x, target,mfccs_scaled)) 
+    
+    #### BASELINE ESC-10
+    ##### Without DA and without padding : SVM Grid Search 1e-2,1e-1, conv6 (out pool5), mean of feature vec : train score :  0.9956250000000001 , test score :  0.7474999999999999
+"""
+    
+    
+    #------------data augmentation (overlapping shorter segments)---------------------------------------------
+    ### Setting dur_sample to 5 seconds disables DA
+
     total_tp = len(x)
-    dur_sample = 22050 #nb de sample pour chaque exemple
+    dur_sample = int(sr_soundnet*3)#nb de sample pour chaque exemple
+    overlap = 3
     step = int(dur_sample/overlap)
 
     for i, start in enumerate(range(0, total_tp, step)) : 
         sub_x = x[start:start+dur_sample]
+        
         if len(sub_x) == dur_sample : 
+            ### padding by copying the first and final sample many times at the beginning and end
+            pad_length = 5 * sr_soundnet ### for example 8 * sr_soundnet will add 8 seconds at the beginning and end  
+            pad_beg = np.ones_like(sub_x)[:pad_length]
+            pad_end = np.ones_like(sub_x)[:pad_length]
+            sub_x = np.hstack([pad_beg,sub_x,pad_end])
+            #print(pad_beg.shape,sub_x.shape,pad_end.shape)
+            
+            ## Calculate SoundNet features
+
             sub_x = torch.tensor(sub_x).view(1,1,-1, 1)
             sub_x = soundnet(sub_x, output_layer)
             sub_x = torch.squeeze(sub_x).T
-            sub_x = sub_x.reshape(-1)
-            #x = torch.mean(sub_x,0)
+            #sub_x = sub_x.reshape(-1)
+            
+            sub_x = torch.mean(sub_x,0).detach().numpy() #### better to detach here to save memory
             folds[fold].append((sub_x, target))
         else : 
             pass
@@ -80,28 +128,54 @@ for test_fold in range(1,6):
         datatrain.extend(fold)
     print(f'length datatest : ', len(datatest), ', length datatrain : ', len(datatrain))
 
-    x_train = normalize(np.array([x.detach().numpy() for x,y in datatrain]))
+    x_train = StandardScaler().fit_transform((np.array([x for x,y in datatrain]))) ### Standardize features by removing the mean and scaling to unit variance
     y_train = np.array([y for x,y in datatrain])
 
-    x_test = normalize(np.array([x.detach().numpy() for x,y in datatest]))
+
+    x_test = StandardScaler().fit_transform(np.array([x for x,y in datatest])) ### Standardize features by removing the mean and scaling to unit variance
     y_test = np.array([y for x,y in datatest])
 
     print(x_train.shape, y_train.shape, x_test.shape, y_test.shape)
 
     #------------------------------train SVM------------------------------------------
+    ## A few very simple estimators 
 
-    net = svm.LinearSVC(dual=False, C=1e-2)
-    #clf = GridSearchCV(net, parameter_grid)
-    net.fit(x_train, y_train)
+    #clf = svm.LinearSVC(C=1e-1)
+    if args.classif == 'svm':
+        clf = GridSearchCV(svm.LinearSVC(dual=False), parameter_grid,n_jobs=-1)
+        print("Grid Search with Linear SVM")
+    elif args.classif == 'mlp':
+        clf = MLPClassifier(hidden_layer_sizes=(512,),learning_rate_init=0.01)
+        print('Classifying with MLP')
+    else:
+        print('Classifying with KNN')
+        clf=KNeighborsClassifier()
+
+    clf.fit(x_train, y_train)
     #print(clf.cv_results_['rank_test_score'])
-    train_scores.append(net.score(x_train,y_train))
-    test_scores.append(net.score(x_test,y_test))
+    train_scores.append(clf.score(x_train,y_train))
+    test_scores.append(clf.score(x_test,y_test))
+    
+
+    print('TRAINING SET')
+    print(classification_report(y_true=y_train,y_pred=clf.predict(x_train)))
+
+    print('TEST SET')
+    print(classification_report(y_true=y_test,y_pred=clf.predict(x_test)))
+
+
+    ### UMAP visualisation 
+
+    #lowdim = UMAP(n_components=2).fit_transform(x_train)
+    #plt.scatter(lowdim[:,0],lowdim[:,1],c=(y_train))
+    #plt.show()
+
 
 train_score = np.mean(train_scores)
 test_score = np.mean(test_scores)
 print(train_scores)
 print(test_scores)
-print(f'train score : ', train_score, ', test score : ', test_score)
+print(f'Average score accross folds for train: ', train_score, ', and test : ', test_score)
 
     
 
