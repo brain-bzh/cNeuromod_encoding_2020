@@ -187,14 +187,11 @@ results = {'datetime':now,'dataset':args.dataset,'layer':args.layer,'classifier'
 
 if os.path.isfile(args.save):
     Df = pd.read_csv(args.save)
-    Df.append([results])
+    Df2 = pd.DataFrame([results])
+    Df = pd.concat([Df,Df2])
 else:
     Df = pd.DataFrame([results])
 
 print(Df)
-Df = Df.sort_values(by='test_avg')
+Df = Df.sort_values(by='test_avg',ascending=False)
 Df.to_csv(args.save,index=False)
-
-
-
-
