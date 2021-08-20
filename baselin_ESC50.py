@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from librosa.core import audio
 from torch.functional import norm
@@ -31,6 +32,7 @@ parser.add_argument("--seg", type=float,default='3.0',help="Segment length (s) t
 parser.add_argument("--step", type=float,default='1.0',help="Step length (s) between segments")
 parser.add_argument("--padding", type=float,default='5.0',help="How much padding (s) to add before and after the segments")
 parser.add_argument("--classif", type=str,default='mlp',choices=['svm', 'mlp', 'knn'],help="Choose classifer (SVM, MLP, KNN)")
+parser.add_argument("--save", type=str,default="results.csv",help="Path to a csv file to aggregate results (must have been saved with this script, will be loaded if exists or created otherwise)")
 
 args = parser.parse_args()
 ### See here https://github.com/nicofarr/paper-2015-esc-dataset/tree/master/Notebook for baseline results using MFCC extracted features 
@@ -179,9 +181,19 @@ test_score = np.mean(test_scores)
 print(train_scores)
 print(test_scores)
 print(f'Average score accross folds for train: ', train_score, ', and test : ', test_score)
+now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+results = {'datetime':now,'dataset':args.dataset,'layer':args.layer,'classifier':args.classif,'seg':args.seg,'step':args.step,'padding':args.padding,'train_avg':train_score,'test_avg':test_score,'train_std': np.std(train_scores),'test_std':np.std(test_scores),
+}
 
-    
+if os.path.isfile(args.save):
+    Df = pd.read_csv(args.save)
+    Df.append([results])
+else:
+    Df = pd.DataFrame([results])
 
+print(Df)
+Df = Df.sort_values(by='test_avg')
+Df.to_csv(args.save,index=False)
 
 
 
