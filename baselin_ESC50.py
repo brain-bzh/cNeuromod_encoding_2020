@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+from re import sub
 from librosa.core import audio
 from torch.functional import norm
 from tqdm import tqdm
@@ -28,6 +29,7 @@ parser.add_argument("--checkpoint","-c", type=str,default='./sound8.pth',help="P
 parser.add_argument("--dataset", type=str,default='esc10',choices=['esc10','esc50'],help="esc10 or esc50")
 parser.add_argument("--layer", type=str,default='conv6',choices=['conv1', 'pool1', 'conv2', 'pool2' , 'conv3' , 'conv4' , 
                             'conv5', 'pool5', 'conv6', 'conv7'],help="Choose soundnet layer to train from")
+parser.add_argument("--feat", type=str,default='mean',choices=['mean', 'concat'],help="Choose whether to average or concatenate the features")                            
 parser.add_argument("--seg", type=float,default='3.0',help="Segment length (s) to divide the wav files ")
 parser.add_argument("--step", type=float,default='1.0',help="Step length (s) between segments")
 parser.add_argument("--padding", type=float,default='5.0',help="How much padding (s) to add before and after the segments")
@@ -115,9 +117,21 @@ for filename, target, fold in tqdm(zip(dataset['filename'], dataset['category'],
             sub_x = torch.tensor(sub_x).view(1,1,-1, 1)
             sub_x = soundnet(sub_x, output_layer)
             sub_x = torch.squeeze(sub_x).T
-            #sub_x = sub_x.reshape(-1)
-            
-            sub_x = torch.mean(sub_x,0).detach().numpy() #### better to detach here to save memory
+
+            if args.feat == 'concat':
+                ###  try to keep only the non padded part, but it's a little tricky to calculate... 
+                ###                 
+                ratio = pad_length / dur_sample  
+                cut = int((sub_x.shape[0]/ratio)/2)
+                
+                sub_x = sub_x[cut:-cut,:]
+                
+                sub_x = sub_x.reshape(-1).detach().numpy() #### better to detach here to save memory
+                
+                
+                
+            else:
+                sub_x = torch.mean(sub_x,0).detach().numpy() #### better to detach here to save memory
             folds[fold].append((sub_x, target))
         else : 
             pass
@@ -182,7 +196,7 @@ print(train_scores)
 print(test_scores)
 print(f'Average score accross folds for train: ', train_score, ', and test : ', test_score)
 now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
-results = {'datetime':now,'dataset':args.dataset,'layer':args.layer,'classifier':args.classif,'seg':args.seg,'step':args.step,'padding':args.padding,'train_avg':train_score,'test_avg':test_score,'train_std': np.std(train_scores),'test_std':np.std(test_scores),
+results = {'datetime':now,'dataset':args.dataset,'layer':args.layer,'feat':args.feat,'classifier':args.classif,'seg':args.seg,'step':args.step,'padding':args.padding,'train_avg':train_score,'test_avg':test_score,'train_std': np.std(train_scores),'test_std':np.std(test_scores),
 }
 
 if os.path.isfile(args.save):
