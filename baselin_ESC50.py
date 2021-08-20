@@ -34,6 +34,7 @@ parser.add_argument("--seg", type=float,default='3.0',help="Segment length (s) t
 parser.add_argument("--step", type=float,default='1.0',help="Step length (s) between segments")
 parser.add_argument("--padding", type=float,default='5.0',help="How much padding (s) to add before and after the segments")
 parser.add_argument("--classif", type=str,default='mlp',choices=['svm', 'mlp', 'knn'],help="Choose classifer (SVM, MLP, KNN)")
+parser.add_argument("--hidden", type=int,default=512,help="Number of hidden neurons")
 parser.add_argument("--save", type=str,default="results.csv",help="Path to a csv file to aggregate results (must have been saved with this script, will be loaded if exists or created otherwise)")
 
 args = parser.parse_args()
@@ -164,7 +165,7 @@ for test_fold in range(1,6):
         clf = GridSearchCV(svm.LinearSVC(dual=False), parameter_grid,n_jobs=-1)
         print("Grid Search with Linear SVM")
     elif args.classif == 'mlp':
-        clf = MLPClassifier(hidden_layer_sizes=(512,),learning_rate_init=0.01)
+        clf = MLPClassifier(hidden_layer_sizes=(args.hidden,),learning_rate_init=0.01)
         print('Classifying with MLP')
     else:
         print('Classifying with KNN')
@@ -196,7 +197,7 @@ print(train_scores)
 print(test_scores)
 print(f'Average score accross folds for train: ', train_score, ', and test : ', test_score)
 now = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
-results = {'datetime':now,'dataset':args.dataset,'layer':args.layer,'feat':args.feat,'classifier':args.classif,'seg':args.seg,'step':args.step,'padding':args.padding,'train_avg':train_score,'test_avg':test_score,'train_std': np.std(train_scores),'test_std':np.std(test_scores),
+results = {'datetime':now,'dataset':args.dataset,'layer':args.layer,'feat':args.feat,'classifier':args.classif,'hidden':args.hidden,'seg':args.seg,'step':args.step,'padding':args.padding,'train_avg':train_score,'test_avg':test_score,'train_std': np.std(train_scores),'test_std':np.std(test_scores),
 }
 
 if os.path.isfile(args.save):
