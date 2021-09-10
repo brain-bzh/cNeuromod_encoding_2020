@@ -28,11 +28,15 @@ from matplotlib import pyplot as plt
 #     'val_r2_mean':5
 # }
 
+soundNet_params_path = './sound8.pth' #'/home/maellef/git_dir/cNeuromod_encoding_2020/sound8.pth'
+mistroifile = '/home/maelle/Database/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
+
 def model_training(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis):
-    checkpt_still_here = os.path.lexists('checkpoint.pt')
+    # WIP CHECK ---> still needed ?
+    checkpt_still_here = os.path.lexists('checkpoint.pt') #'/home/maellef/scratch/checkpoint.pt'
     if checkpt_still_here : 
         print('suppression of checkpoint file')
-        os.remove('checkpoint.pt')
+        os.remove('checkpoint.pt') #'/home/maellef/scratch/checkpoint.pt'
 
     #data selection
     all_subs_files = data_selection['all_data']
@@ -108,7 +112,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
     #|--------------------------------------------------------------------------------------------------------------------------------------
     ### Model Setup
-    net = encod.SoundNetEncoding_conv(pytorch_param_path='./sound8.pth',fmrihidden=fmrihidden,out_size=nInputs, kernel_size=kernel_size, power_transform=power_transform)
+    net = encod.SoundNetEncoding_conv(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, kernel_size=kernel_size, power_transform=power_transform)
     if gpu : 
         net.to("cuda")
     else:
@@ -192,8 +196,6 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
         pass
 
     #6 - Save Model
-
-    mistroifile = '/home/maelle/Database/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 
     dt_string = enddate.strftime("%Y-%m-%d-%H-%M-%S")
     outfile_name += dt_string

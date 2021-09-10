@@ -16,7 +16,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import normalize, scale,StandardScaler
 from sklearn.metrics import classification_report
 from scipy.signal import resample
-from umap import UMAP
+#from umap import UMAP
 from matplotlib import pyplot as plt
 from models import soundnet_model as snd
 import argparse
@@ -59,14 +59,14 @@ offset = 0 #starting point for audio
 
 soundnet = snd.SoundNet8_pytorch()
 soundnet.load_state_dict(torch.load(pytorch_param_path))
-output_layer = args.layer #output de pool5
+output_layer = args.layer #by default, conv6 is output de pool5 (--> to check)
 sr_soundnet = 22050
 
 parameter_grid = {'C':[1e-2,1e-1,1]}
 
 #------category_labels--------------------------------------------------------------
 target_labels = pd.DataFrame([dataset['target'], dataset['category']]).T.drop_duplicates().sort_values(by=['target']).reset_index(drop=True)
-print(target_labels)
+#print(target_labels)
 
 #----------folds-WIP----------------------------------------------------
 
@@ -162,11 +162,11 @@ for test_fold in range(1,6):
 
     #clf = svm.LinearSVC(C=1e-1)
     if args.classif == 'svm':
-        clf = GridSearchCV(svm.LinearSVC(dual=False), parameter_grid,n_jobs=-1)
         print("Grid Search with Linear SVM")
+        clf = GridSearchCV(svm.LinearSVC(dual=False), parameter_grid,n_jobs=-1)
     elif args.classif == 'mlp':
-        clf = MLPClassifier(hidden_layer_sizes=(args.hidden,),learning_rate_init=0.01)
         print('Classifying with MLP')
+        clf = MLPClassifier(hidden_layer_sizes=(args.hidden,),learning_rate_init=0.01)
     else:
         print('Classifying with KNN')
         clf=KNeighborsClassifier()
