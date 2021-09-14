@@ -98,7 +98,7 @@ for filename, target, fold in tqdm(zip(dataset['filename'], dataset['category'],
     ### Setting dur_sample to 5 seconds disables DA
 
     total_tp = len(x)
-    dur_sample = int(sr_soundnet*args.seg)#nb de sample pour chaque exemple
+    dur_sample = int(sr_soundnet*args.seg)#nb de sample pour chaque example
     
     step = int(sr_soundnet*args.step)
 
@@ -127,9 +127,7 @@ for filename, target, fold in tqdm(zip(dataset['filename'], dataset['category'],
                 
                 sub_x = sub_x[cut:-cut,:]
                 
-                sub_x = sub_x.reshape(-1).detach().numpy() #### better to detach here to save memory
-                
-                
+                sub_x = sub_x.reshape(-1).detach().numpy() #### better to detach here to save memory   
                 
             else:
                 sub_x = torch.mean(sub_x,0).detach().numpy() #### better to detach here to save memory

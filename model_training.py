@@ -62,6 +62,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     model = training_hyperparameters['model']
     fmrihidden = training_hyperparameters['fmrihidden']
     kernel_size = training_hyperparameters['kernel_size']
+    finetune_start = training_hyperparameters['finetune_start'] 
     patience_es = training_hyperparameters['patience']
     delta_es = training_hyperparameters['delta']
     gpu = training_hyperparameters['gpu']
@@ -91,6 +92,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
     #------------------select data (dataset, films, sessions/seasons)
 
+    #input : list of tuple of shape (audio_path, scan_path)
     train_input = [(data[0], data[sessions_train]) for data in train_data]
     eval_input = [(data[0], data[sessions_eval]) for data in eval_data]
 
@@ -112,7 +114,10 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
     #|--------------------------------------------------------------------------------------------------------------------------------------
     ### Model Setup
-    net = encod.SoundNetEncoding_conv(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, kernel_size=kernel_size, power_transform=power_transform)
+    print(f'AAAAAAh ! nInputs : ', nInputs, ', kernel size : ', kernel_size,
+            ' power_transform : ', power_transform, ', weight_decay', weight_decay)
+    net = encod.SoundNetEncoding_conv(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, 
+                                    kernel_size=kernel_size, power_transform=power_transform, train_start= finetune_start)
     if gpu : 
         net.to("cuda")
     else:
@@ -238,6 +243,8 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     #     r2_img.to_filename(str_bestmodel_nii)
     save(state, str_bestmodel)
 
+
+#---------WIP------------------------------------
     checkpt_still_here = os.path.lexists('checkpoint.pt')
     if checkpt_still_here : 
         print('suppression of checkpoint file')
@@ -273,6 +280,8 @@ if __name__ == "__main__":
     parser.add_argument("--hs", type=int, default=1000)
     parser.add_argument("--bs", type=int, default=30)
     parser.add_argument("--ks", type=int, default=5)
+    parser.add_argument("-f","--finetuneStart", type=str, default=None)
+    #parser.add_argument("--ol", type=, default=)#output layer
 
     #training_hyperparameters
         #early_stopping
@@ -321,6 +330,7 @@ if __name__ == "__main__":
         'mseloss':nn.MSELoss(reduction='sum'),
         'fmrihidden':args.hs,
         'batchsize':args.bs,
+        'finetune_start':args.finetuneStart,
         'kernel_size':args.ks,
         'patience':args.patience,
         'delta':args.delta, 
@@ -341,7 +351,7 @@ if __name__ == "__main__":
     #-------------------------------------------------------------
     ml_analysis = ''
     if args.wandb :
-        #os.environ['WANDB_MODE'] = 'offline'
+        #os.environ['WANDB_MODE'] = 'offline' #for beluga environment
         print("wandb")
         import wandb 
         wandb.init(project="neuroencoding_audio", config={})
