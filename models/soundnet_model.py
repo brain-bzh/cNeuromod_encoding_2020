@@ -10,6 +10,12 @@ class SoundNet8_pytorch(nn.Module):
         super(SoundNet8_pytorch, self).__init__()
         
         self.define_module()
+        self.indexes= {"conv1" : 0, "pool1" : 1, "conv2" : 2, "pool2" : 3, "conv3" : 4, "conv4" : 5, 
+                        "conv5" : 6, "pool5" : 7, "conv6" : 8, "conv7" : 9, "conv8" : 10, "conv8_2" : 11} 
+        self.layers = [self.conv1, self.pool1, self.conv2, self.pool2, self.conv3, self.conv4, 
+                        self.conv5, self.pool5, self.conv6, self.conv7, self.conv8, self.conv8_2]
+        self.layers_size = {"conv1" : 16, "pool1" : 16, "conv2" : 32, "pool2" : 32, "conv3" : 64, "conv4" : 128,
+                            "conv5" : 256, "pool5" : 256, "conv6" : 512, "conv7" : 1024, "conv8" : 1000, "conv8_2" : 401} 
         
     def define_module(self):
         self.conv1 = nn.Sequential(
@@ -64,19 +70,21 @@ class SoundNet8_pytorch(nn.Module):
     def forward(self, x, output_layer = "conv8", train_start = None):
         warnings.filterwarnings("ignore")
 
-        soundNet_indexes= {"conv1" : 0, "pool1" : 1, "conv2" : 2, "pool2" : 3, "conv3" : 4, "conv4" : 5, 
-                            "conv5" : 6, "pool5" : 7, "conv6" : 8, "conv7" : 9} 
-        soundNet_layers = [self.conv1, self.pool1, self.conv2, self.pool2, self.conv3, self.conv4, 
-                        self.conv5, self.pool5, self.conv6, self.conv7, self.conv8, self.conv8_2] 
+        # self.indexes= {"conv1" : 0, "pool1" : 1, "conv2" : 2, "pool2" : 3, "conv3" : 4, "conv4" : 5, 
+        #                 "conv5" : 6, "pool5" : 7, "conv6" : 8, "conv7" : 9, "conv8" : 10, "conv8_2" : 11} 
+        # self.layers = [self.conv1, self.pool1, self.conv2, self.pool2, self.conv3, self.conv4, 
+        #                 self.conv5, self.pool5, self.conv6, self.conv7, self.conv8, self.conv8_2]
+        # self.layers_size = {"conv1" : 16, "pool1" : 16, "conv2" : 32, "pool2" : 32, "conv3" : 64, "conv4" : 128,
+        #                     "conv5" : 256, "pool5" : 256, "conv6" : 512, "conv7" : 1024, "conv8" : 1000, "conv8_2" : 401} 
 
-        output_index =  soundNet_indexes[output_layer] if output_layer != "conv8"  else 10
-        train_limit_index = soundNet_indexes[train_start] if train_start != None else 0
-        #train_limit is the LAST layer to NOT be trained, train_limit_index is the index of the FIRST layer to be trained
+        output_index =  self.indexes[output_layer] if output_layer != "conv8"  else 10
+        train_start_index = self.indexes[train_start] if train_start != None else 
+        #train_start_index is the index of the FIRST layer to be trained, if train_start == None --> transfer learning without finetuning
  
         with torch.no_grad(): 
-            for net in soundNet_layers[:train_limit_index]:
+            for net in self.layers[:train_start_index]:
                 x = net(x) 
-        for net in soundNet_layers[train_limit_index:output_index]:
+        for net in self.layers[train_start_index:output_index]:
             x = net(x) 
 
         if output_layer == "conv8":

@@ -63,6 +63,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     fmrihidden = training_hyperparameters['fmrihidden']
     kernel_size = training_hyperparameters['kernel_size']
     finetune_start = training_hyperparameters['finetune_start'] 
+    output_layer = training_hyperparameters['output_layer']
     patience_es = training_hyperparameters['patience']
     delta_es = training_hyperparameters['delta']
     gpu = training_hyperparameters['gpu']
@@ -114,9 +115,9 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
     #|--------------------------------------------------------------------------------------------------------------------------------------
     ### Model Setup
-    print(f'AAAAAAh ! nInputs : ', nInputs, ', kernel size : ', kernel_size,
+    print(f'nInputs : ', nInputs, ', kernel size : ', kernel_size, ', output_layer : ', output_layer, ', finetune_start : ', finetune_start,
             ' power_transform : ', power_transform, ', weight_decay', weight_decay)
-    net = encod.SoundNetEncoding_conv(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, 
+    net = encod.SoundNetEncoding_conv(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, output_layer=output_layer,
                                     kernel_size=kernel_size, power_transform=power_transform, train_start= finetune_start)
     if gpu : 
         net.to("cuda")
@@ -280,8 +281,8 @@ if __name__ == "__main__":
     parser.add_argument("--hs", type=int, default=1000)
     parser.add_argument("--bs", type=int, default=30)
     parser.add_argument("--ks", type=int, default=5)
-    parser.add_argument("-f","--finetuneStart", type=str, default=None)
-    #parser.add_argument("--ol", type=, default=)#output layer
+    parser.add_argument("-f","--finetuneStart", type=str, default=None) #among "conv1", "pool1", ... "conv8", "conv8_2"
+    parser.add_argument("-o", "--outputLayer", type=str, default="conv7")#output layer
 
     #training_hyperparameters
         #early_stopping
@@ -331,6 +332,7 @@ if __name__ == "__main__":
         'fmrihidden':args.hs,
         'batchsize':args.bs,
         'finetune_start':args.finetuneStart,
+        'output_layer':args.outputLayer,
         'kernel_size':args.ks,
         'patience':args.patience,
         'delta':args.delta, 

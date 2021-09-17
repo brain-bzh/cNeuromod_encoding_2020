@@ -5,7 +5,7 @@ import numpy as np
 from models import soundnet_model as snd
  
 class SoundNetEncoding_conv(nn.Module):
-    def __init__(self,out_size,fmrihidden=1000, kernel_size = 1, output_layer = "conv7", 
+    def __init__(self, out_size, output_layer, fmrihidden=1000, kernel_size = 1, 
                 train_start = None, nroi_attention=None, power_transform=False, hrf_model=None, 
                 oversampling = 16, tr = 1.49, audiopad = 0, pytorch_param_path = None):
         super(SoundNetEncoding_conv, self).__init__()
@@ -18,7 +18,6 @@ class SoundNetEncoding_conv(nn.Module):
         self.layers_features = {}
         self.power_transform = power_transform
 
-        #-------------WIP------output_layer + train_start comme arguments !!-----
         if pytorch_param_path is not None:
             print("Loading SoundNet weights...")
             # load pretrained weights of original soundnet model
@@ -30,18 +29,23 @@ class SoundNetEncoding_conv(nn.Module):
                 self.parameters_name.append(layer_weights)
 
         #freeze the parameters of soundNet up to desired training layer 
-        if train_start is not None : 
-            print("Finetuning : backbone will be optimized up until "+str(train_start)+" included.")
-            for name, param in zip(self.parameters_name, self.soundnet.parameters()):
+        finetuning = False
+        for name, param in zip(self.parameters_name, self.soundnet.parameters()):
+            if train_start is not None : 
                 if name.find(self.train_start)>-1 : 
+                    finetuning = True
                     break
-                print(name)
-                param.requires_grad = False
-        else : 
-            print("Transfer learning - backbone is fixed")
+            param.requires_grad = False
 
-        self.encoding_fmri = nn.Conv1d(1024,self.out_size,kernel_size=(kernel_size,1), padding=(kernel_size-1,0))
-        #-------------WIP--------------------------------------------------------
+        if finetuning :
+            print("Finetuning : backbone will be optimized up until "+str(train_start)+" included.") 
+        else : 
+            print("Transfer learning - backbone is fixed") 
+        
+        
+        self.encoding_fmri = nn.Conv1d(self.soundnet.layers_size[output_layer],self.out_size,
+                                        kernel_size=(kernel_size,1), padding=(kernel_size-1,0))
+        print('shape of encoding matrice from last encoding layer : {} X {}'.format(self.soundnet.layers_size[output_layer], self.out_size))
 
         if nroi_attention is not None:
             self.maskattention = torch.nn.Parameter(torch.rand(out_size,nroi_attention))
@@ -58,8 +62,7 @@ class SoundNetEncoding_conv(nn.Module):
 
     def forward(self, x):
         emb = self.soundnet(x, self.output_layer, self.train_start)
-        if self.power_transform:
-            emb = torch.sqrt(emb)
+        emb = torch.sqrt(emb) if self.power_transform else emb
         out = self.encoding_fmri(emb)
         return out
     
@@ -79,8 +82,7 @@ class SoundNetEncoding_conv(nn.Module):
  
         return output_list
 
-#---WIP---------------------------------------------------------------
-
+#=============================================WIP============================================
 class SoundNetEncoding(nn.Module):
     def __init__(self,pytorch_param_path,nroi=210,fmrihidden=1000,nroi_attention=None, hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0):
         super(SoundNetEncoding, self).__init__()
