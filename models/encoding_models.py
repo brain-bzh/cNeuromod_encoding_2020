@@ -66,21 +66,17 @@ class SoundNetEncoding_conv(nn.Module):
         out = self.encoding_fmri(emb)
         return out
     
-    def extract_feat(self,x:torch.Tensor)->list:
-        output_list = []
-        for net in [self.soundnet.conv1, self.soundnet.conv2, self.soundnet.conv3, 
-                    self.soundnet.conv4, self.soundnet.conv5, self.soundnet.conv6, self.soundnet.conv7]:
-            x = net(x)
-            output_list.append(x.detach().cpu().numpy())
+    def extract_feat(self,x:torch.Tensor)->dict:
+        (x, output_list) = self.soundnet.extract_feat(x=x, output=self.output_layer)
 
         if self.power_transform:
             x = torch.sqrt(x)
-            output_list.append(x.detach().cpu().numpy())
+            output_list['power_transform'] = x.detach().cpu().numpy()
 
-        out = self.encoding_fmri(x)
-        output_list.append(out.detach().cpu().numpy())
+        x = self.encoding_fmri(x)
+        output_list['encoding_layer'] = x.detach().cpu().numpy()
  
-        return output_list
+        return (x, output_list)
 
 #=============================================WIP============================================
 class SoundNetEncoding(nn.Module):
