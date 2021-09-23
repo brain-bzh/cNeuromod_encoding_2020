@@ -41,8 +41,12 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     #data selection
     all_subs_files = data_selection['all_data']
     subject = data_selection['subject']
-    train_data = all_subs_files[data_selection['train_data']]
-    eval_data = all_subs_files[data_selection['eval_data']]
+    train_data = []
+    for subdata in data_selection['train_data']:
+        train_data.extend(all_subs_files[subdata]) 
+    eval_data = []
+    for subdata in data_selection['eval_data']:
+        eval_data.extend(all_subs_files[subdata])
     sessions_train = data_selection['sessions_train']
     sessions_eval = data_selection['sessions_eval']
 
@@ -268,8 +272,8 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--dataset", type=str)
     parser.add_argument("--sessions_train", type=int, default=1) # WIP, must be >=1, add a condition to check the entry
     parser.add_argument("--sessions_eval", type=int, default=1) # WIP, must be >=1, add a condition to check the entry
-    parser.add_argument("--trainData", type=str, default='')
-    parser.add_argument("--evalData", type=str, default='')
+    parser.add_argument("--trainData", type=str, nargs='+')
+    parser.add_argument("--evalData", type=str, nargs='+')
 
     #data_processing
     parser.add_argument("--scale", type=str)
@@ -278,7 +282,7 @@ if __name__ == "__main__":
     parser.add_argument("--sr", type=int, default=22050)
 
     #model_parameters
-    parser.add_argument("--hs", type=int, default=1000)
+    parser.add_argument("--hs", type=int, default=1000) #not used anymore with the conv as encoding layer, should we keep it ?
     parser.add_argument("--bs", type=int, default=30)
     parser.add_argument("--ks", type=int, default=5)
     parser.add_argument("-f","--finetuneStart", type=str, default=None) #among "conv1", "pool1", ... "conv8", "conv8_2"
