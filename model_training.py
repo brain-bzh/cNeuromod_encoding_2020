@@ -119,10 +119,11 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
     #|--------------------------------------------------------------------------------------------------------------------------------------
     ### Model Setup
-    print(f'nInputs : ', nInputs, ', kernel size : ', kernel_size, ', output_layer : ', output_layer, ', finetune_start : ', finetune_start,
-            ' power_transform : ', power_transform, ', weight_decay', weight_decay)
-    net = encod.SoundNetEncoding_conv(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, output_layer=output_layer,
-                                    kernel_size=kernel_size, power_transform=power_transform, train_start= finetune_start)
+    print(f'nInputs : ', nInputs, ', kernel size : ', kernel_size, ', output_layer : ', output_layer, 
+        ', finetune_start : ', finetune_start, ' power_transform : ', power_transform, ', weight_decay', weight_decay)
+    net = encod.SoundNetEncoding_conv(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, 
+                                    output_layer=output_layer, kernel_size=kernel_size, power_transform=power_transform, 
+                                    train_start= finetune_start)
     if gpu : 
         net.to("cuda")
     else:
@@ -270,8 +271,8 @@ if __name__ == "__main__":
     #data_selection
     parser.add_argument("-s", "--sub", type=str)
     parser.add_argument("-d", "--dataset", type=str)
-    parser.add_argument("--sessions_train", type=int, default=1) # WIP, must be >=1, add a condition to check the entry
-    parser.add_argument("--sessions_eval", type=int, default=1) # WIP, must be >=1, add a condition to check the entry
+    parser.add_argument("--sessionsTrain", type=int, default=1) # WIP, must be >=1, add a condition to check the entry
+    parser.add_argument("--sessionsEval", type=int, default=1) # WIP, must be >=1, add a condition to check the entry
     parser.add_argument("--trainData", type=str, nargs='+')
     parser.add_argument("--evalData", type=str, nargs='+')
 
@@ -317,8 +318,8 @@ if __name__ == "__main__":
         'dataset' : args.dataset,
         'train_data' : args.trainData,
         'eval_data' : args.evalData,
-        'sessions_train' : args.sessions_train,
-        'sessions_eval' : args.sessions_eval
+        'sessions_train' : args.sessionsTrain,
+        'sessions_eval' : args.sessionsEval
     }
     ds = data_selection
 
