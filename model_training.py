@@ -28,15 +28,15 @@ from matplotlib import pyplot as plt
 #     'val_r2_mean':5
 # }
 
-soundNet_params_path = './sound8.pth' #'/home/maellef/git_dir/cNeuromod_encoding_2020/sound8.pth'
-mistroifile = '/home/maelle/Database/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
+soundNet_params_path = '/home/maellef/git_dir/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
+mistroifile = '/home/maellef/Database/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 
 def model_training(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis):
     # WIP CHECK ---> still needed ?
-    checkpt_still_here = os.path.lexists('checkpoint.pt') #'/home/maellef/scratch/checkpoint.pt'
+    checkpt_still_here = os.path.lexists('/home/maellef/scratch/checkpoint.pt') #'checkpoint.pt'
     if checkpt_still_here : 
         print('suppression of checkpoint file')
-        os.remove('checkpoint.pt') #'/home/maellef/scratch/checkpoint.pt'
+        os.remove('/home/maellef/scratch/checkpoint.pt')#'checkpoint.pt'
 
     #data selection
     all_subs_files = data_selection['all_data']
@@ -88,11 +88,14 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     #warm_restart = training_hyperparameters['warm_restart']
 
     #----------define-paths-and-names----------------------
-    outfile_name = str(scale)+'_'+str(model.__name__)+'_'+str(fmrihidden)+'_ks'+str(kernel_size)+'_lr'+str(lr)+'_wd'+str(weight_decay)+'_'
-    outfile_name = outfile_name+'decoupled_' if decoupled_weightDecay else outfile_name
-    outfile_name = outfile_name+'lrSch_' if lr_scheduler else outfile_name
-    outfile_name = outfile_name+'pt_' if power_transform else outfile_name
-    #WIP : outfile_name = outfile_name+'trainPass_' if train_pass else outfile_name
+    outfile_name = '{}_{}_{}_{:03}{:02}{:02}'.format(data_processing['dataset'], scale, model.__name__, batchsize, kernel_size, patience_es)
+    outfile_name +='{:.0e}'.format(delta_es)[-3:]+'{:.0e}'.format(lr)[-3:]+'{:.0e}'.format(weight_decay)[-3:]+'_opt'
+
+    outfile_name = outfile_name+'1' if decoupled_weightDecay else outfile_name+'0'
+    outfile_name = outfile_name+'1' if lr_scheduler else outfile_name+'0'
+    outfile_name = outfile_name+'1' if power_transform else outfile_name+'0'
+    outfile_name = outfile_name+'_f_'+finetune_start if finetune_start != None else outfile_name
+
     destdir = outpath
 
     #------------------select data (dataset, films, sessions/seasons)
@@ -251,10 +254,10 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
 
 #---------WIP------------------------------------
-    checkpt_still_here = os.path.lexists('checkpoint.pt')
+    checkpt_still_here = os.path.lexists('/home/maellef/scratch/checkpoint.pt') #'checkpoint.pt'
     if checkpt_still_here : 
         print('suppression of checkpoint file')
-        os.remove('checkpoint.pt')
+        os.remove('/home/maellef/scratch/checkpoint.pt') #'checkpoint.pt'
 
 #------------------------------------------------------------------------------------------------------------------------------------
 #training_called_by_bash
@@ -358,12 +361,10 @@ if __name__ == "__main__":
     #-------------------------------------------------------------
     ml_analysis = ''
     if args.wandb :
-        #os.environ['WANDB_MODE'] = 'offline' #for beluga environment
-        print("wandb")
+        os.environ['WANDB_MODE'] = 'offline' #for beluga environment
         import wandb 
-        wandb.init(project="neuroencoding_audio", config={})
+        wandb.init(project="neuroencoding_audio", config={})#group=, job_type=, name=, 
         wandb.config.update(args)
-        print("update config okay")
         ml_analysis += 'wandb'
 
     elif args.comet : 
@@ -371,9 +372,9 @@ if __name__ == "__main__":
         experiment = comet_ml.Experiment("1NT8FqmXsAH088rHLBYC1Yyev")
         ml_analysis += 'comet'
 
-    outpath = '/home/maelle/Results/' #"/home/maellef/Results/"
-    stimuli_path = '/home/maelle/DataBase/stimuli' #'/home/maellef/DataBase/stimuli'
-    embed_path = '/home/maelle/DataBase/fMRI_Embeddings' #'/home/maellef/DataBase/fMRI_Embeddings'
+    outpath = '/home/maellef/Results/' #"/home/maelle/Results/"
+    stimuli_path = '/home/maellef/DataBase/stimuli' #'/home/maelle/DataBase/stimuli'
+    embed_path = '/home/maellef/DataBase/fMRI_Embeddings' #'/home/maelle/DataBase/fMRI_Embeddings'
     
     dataset_path = os.path.join(stimuli_path, ds['dataset'])
     parcellation_path = os.path.join(embed_path, dp['scale'], ds['dataset'], 'sub-'+args.sub)
@@ -384,7 +385,7 @@ if __name__ == "__main__":
         if os.path.isdir(film_path):
             all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
 
-    resultpath = outpath+dt_string+"verify_train_{}_lr0.01_{}epochs".format(dp['scale'], th['nbepoch'])
+    resultpath = os.path.join(outpath, dt_string+"_test_hyperparameters_train")
     resultpath = os.path.join(resultpath, 'sub-'+args.sub)
     os.makedirs(resultpath, exist_ok=True)
     
