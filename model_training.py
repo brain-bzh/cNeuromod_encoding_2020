@@ -211,22 +211,20 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
     #6 - Save Model
 
-    dt_string = enddate.strftime("%Y-%m-%d-%H-%M-%S")
+    dt_string = enddate.strftime("_%Y%m%d%H%M%S")
     outfile_name += dt_string
-
     str_bestmodel = os.path.join(destdir,"{}.pt".format(outfile_name))
-    str_bestmodel_nii = os.path.join(destdir,"{}.nii.gz".format(outfile_name))
 
     r2model = test_r2(testloader,net,mseloss, gpu=gpu)
     r2model[r2model<0] = 0
+
     print("mean R2 score on test set  : {}".format(r2model.mean()))
-
     print("max R2 score on test set  : {}".format(r2model.max()))
-
     print("Training time : {}".format(enddate - startdate))
 
     ## Prepare data structure for checkpoint
     state = {
+                'model' : net,
                 'net': net.state_dict(),
                 'epoch': epoch,
                 'train_loss' : train_loss,
@@ -239,19 +237,13 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
                 'test_r2' : r2model,
                 'test_r2_max' : r2model.max(),
                 'test_r2_mean' : r2model.mean(),
+                'lrs' : lrs,
                 'training_time' : enddate - startdate,
-                'nhidden' : fmrihidden,
-                'model' : net,
-                'selected ROI': selected_inputs,
-                'lrs' : lrs
+                'hyperparameters' : training_hyperparameters,
+                'data_processing' : data_selection,
+                'data_selection' : data_selection
             }
-
-    ### Nifti file Save
-    # if scale == 'MIST_ROI' and nInputs == 210:
-    #     r2_img = signals_to_img_labels(r2model.reshape(1,-1),mistroifile)
-    #     r2_img.to_filename(str_bestmodel_nii)
     save(state, str_bestmodel)
-
 
 #---------WIP------------------------------------
     checkpt_still_here = os.path.lexists('/home/maellef/scratch/checkpoint.pt') #'checkpoint.pt'
