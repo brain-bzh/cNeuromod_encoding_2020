@@ -16,89 +16,78 @@ from nilearn.connectome import ConnectivityMeasure
 
 
 # basepath = '/~/nfarrugi/git/neuromod/cneuromod/movie10/derivatives/fmriprep1.5.0/fmriprep'
-basepath = '/home/maellef/projects/rrg-pbellec/datasets/cneuromod_new/friends/derivatives/fmriprep-20.1.0/fmriprep/'
+cNeuromod_path = '/home/maellef/projects/rrg-pbellec/datasets/cneuromod_new/'
 #'/home/maellef/projects/rrg-pbellec/datasets/cneuromod/friends/derivatives/fmriprep-20.2lts/fmriprep/'
 mistroicsv = '/home/maellef/DataBase/fMRI_parcellations/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
 mistroi_labelsimg = '/home/maellef/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 auditory_mask = '/home/maellef/git_dir/cNeuromod_encoding_2020/parcellation/STG_middle.nii.gz'
-savepath = '/home/maellef/DataBase/fMRI_Embeddings/'
-os.makedirs(savepath,exist_ok=True)
+embedding_path = '/home/maellef/DataBase/fMRI_Embeddings_fmriprep-20.1.0/'
+os.makedirs(embedding_path,exist_ok=True)
 
-def parcellate_auditory(filepath_fmri,auditorymask,save=True,savepath='./results'):
-    savepath = os.path.join(savepath, 'auditory_Voxels')
+def parcellate_auditory(filepath_fmri, auditorymask, subject, dataset, save=True,savepath='./results'):
+    savepath = os.path.join(savepath, 'auditory_Voxels', dataset, subject)
     ## From the filepath_fmri, deduce the maskpath and the tsvfile 
     tsvfile_fmri = filepath_fmri[:-50] + 'desc-confounds_regressors.tsv'
     idfunc = filepath_fmri.find('/func/')
-    filebase = filepath_fmri[idfunc+6:-51]
-    filepath = os.path.join(savepath,filebase)
-    print(filepath)
+    filebase = filepath_fmri[idfunc+6:idfunc+33]
+    print(f"parcellation file is ", filebase)
+
     if os.path.isfile(filepath):
         print("File {} already exists".format(filepath))
         return np.load(filepath)['X']
     else:
-
         ## Initialise the maslabels_img=labels_img,ker
-
         mymasker = NiftiMasker(mask_img=auditorymask,standardize=True,detrend=False,t_r=1.49,smoothing_fwhm=8)
-
         mymasker.fit()
-
         # Load the confounds using the Params24 strategy 
         confounds = Params24().load(tsvfile_fmri)
         ## Apply the masker 
-
         X = mymasker.fit_transform(filepath_fmri,confounds=confounds)
         
         if save:
             print('saving voxel parcellations ...')
             os.makedirs(savepath,exist_ok=True)
-            np.savez_compressed(filepath+'.npz',X=X)        
-        
+            np.savez_compressed(os.path.join(savepath, filebase+'.npz'),X=X)        
         return X
     
-def parcellate_MIST(filepath_fmri,labels_img=mistroi_labelsimg,save=True,savepath='./results'):
-    savepath = os.path.join(savepath, 'MIST_ROI')
+def parcellate_MIST(filepath_fmri, subject, dataset, labels_img=mistroi_labelsimg,save=True,savepath='./results'):
+    savepath = os.path.join(savepath, 'MIST_ROI', dataset, subject)
     ## From the filepath_fmri, deduce the maskpath and the tsvfile 
     maskpath_fmri = filepath_fmri[:-19]+'brain_mask.nii.gz'
     tsvfile_fmri = filepath_fmri[:-50] + 'desc-confounds_regressors.tsv'
-
     idfunc = filepath_fmri.find('/func/')
+    filebase = filepath_fmri[idfunc+6:idfunc+33]
+    print(f"parcellation file is ", filebase)
 
-    filebase = filepath_fmri[idfunc+6:-51]
-    filepath = os.path.join(savepath,filebase)
     if os.path.isfile(filepath):
         print("File {} already exists".format(filepath))
         return np.load(filepath)['X']
     else:
-
         ## Initialise the masker
-
         mymasker = NiftiLabelsMasker(labels_img=labels_img,mask_img=maskpath_fmri,standardize=True,detrend=False,t_r=1.49,smoothing_fwhm=8)
-
         mymasker.fit()
-
         # Load the confounds using the Params24 strategy 
         confounds = Params24().load(tsvfile_fmri)
         ## Apply the masker 
-
         X = mymasker.fit_transform(filepath_fmri,confounds=confounds)
         
         if save:
             print('saving ROI parcellations ...')
             os.makedirs(savepath,exist_ok=True)          
             np.savez_compressed(os.path.join(savepath,filebase+'.npz'),X=X)
-        
         return X  
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--subject", type=str, help="Specify the subject.")
+    parser.add_argument("-s", "--subject", type=str, help="Specify the subject among 01, 02, 03, 04, 05, and 06.")
+    parser.add_argument("-d", "--dataset", type=str, help="Specify the dataset among friends and movie10.")
     args = parser.parse_args()
     subject = "sub-"+args.subject
+    dataset = args.dataset
+    mri_path = os.path.join(cNeuromod_path, dataset+'/derivatives/fmriprep-20.1.0/fmriprep/')
+    subjectdir = os.path.join(mri_path, subject)
 
-    subjectdir = os.path.join(basepath, subject)
-    savepath = os.path.join(savepath, subject)
     for s in os.listdir(subjectdir):
         if s.find('ses')>-1:
             sesspath = os.path.join(subjectdir, s, 'func')
@@ -106,5 +95,5 @@ if __name__ == "__main__":
                 if curfile.find('preproc_bold.nii.gz')>-1 and curfile.find('2009')>-1:
                     filepath = os.path.join(sesspath, curfile)
                     print('Parcellating file ' + filepath)
-                    parcellate_MIST(filepath,save=True,savepath=savepath)
-                    parcellate_auditory(filepath,auditorymask=auditory_mask,save=True,savepath=savepath)
+                    parcellate_MIST(filepath,save=True,savepath=embedding_path, subject=subject, dataset=dataset)
+                    parcellate_auditory(filepath,auditorymask=auditory_mask,save=True,savepath=embedding_path, subject=subject, dataset=dataset)
