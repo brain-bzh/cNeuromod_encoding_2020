@@ -5,7 +5,7 @@
 
 from nilearn.input_data import NiftiMasker, NiftiLabelsMasker
 
-from load_confounds import Params24
+from load_confounds import Minimal
 import os,sys, argparse
 import numpy as np
 
@@ -29,7 +29,8 @@ def parcellate_auditory(filepath_fmri, auditorymask, subject, dataset, save=True
     ## From the filepath_fmri, deduce the maskpath and the tsvfile 
     tsvfile_fmri = filepath_fmri[:-50] + 'desc-confounds_regressors.tsv'
     idfunc = filepath_fmri.find('/func/')
-    filebase = filepath_fmri[idfunc+6:idfunc+33]
+    filebase = filepath_fmri[idfunc+6:idfunc+34]
+    filepath = os.path.join(savepath, filebase+'.npz')
     print(f"parcellation file is ", filebase)
 
     if os.path.isfile(filepath):
@@ -40,14 +41,14 @@ def parcellate_auditory(filepath_fmri, auditorymask, subject, dataset, save=True
         mymasker = NiftiMasker(mask_img=auditorymask,standardize=True,detrend=False,t_r=1.49,smoothing_fwhm=8)
         mymasker.fit()
         # Load the confounds using the Params24 strategy 
-        confounds = Params24().load(tsvfile_fmri)
+        confounds = Minimal().load(filepath_mri)
         ## Apply the masker 
         X = mymasker.fit_transform(filepath_fmri,confounds=confounds)
         
         if save:
             print('saving voxel parcellations ...')
             os.makedirs(savepath,exist_ok=True)
-            np.savez_compressed(os.path.join(savepath, filebase+'.npz'),X=X)        
+            np.savez_compressed(filepath,X=X)        
         return X
     
 def parcellate_MIST(filepath_fmri, subject, dataset, labels_img=mistroi_labelsimg,save=True,savepath='./results'):
@@ -56,7 +57,8 @@ def parcellate_MIST(filepath_fmri, subject, dataset, labels_img=mistroi_labelsim
     maskpath_fmri = filepath_fmri[:-19]+'brain_mask.nii.gz'
     tsvfile_fmri = filepath_fmri[:-50] + 'desc-confounds_regressors.tsv'
     idfunc = filepath_fmri.find('/func/')
-    filebase = filepath_fmri[idfunc+6:idfunc+33]
+    filebase = filepath_fmri[idfunc+6:idfunc+34]
+    filepath = os.path.join(savepath, filebase+'.npz')
     print(f"parcellation file is ", filebase)
 
     if os.path.isfile(filepath):
@@ -67,14 +69,14 @@ def parcellate_MIST(filepath_fmri, subject, dataset, labels_img=mistroi_labelsim
         mymasker = NiftiLabelsMasker(labels_img=labels_img,mask_img=maskpath_fmri,standardize=True,detrend=False,t_r=1.49,smoothing_fwhm=8)
         mymasker.fit()
         # Load the confounds using the Params24 strategy 
-        confounds = Params24().load(tsvfile_fmri)
+        confounds = Minimal().load(filepath_fmri)
         ## Apply the masker 
         X = mymasker.fit_transform(filepath_fmri,confounds=confounds)
         
         if save:
             print('saving ROI parcellations ...')
             os.makedirs(savepath,exist_ok=True)          
-            np.savez_compressed(os.path.join(savepath,filebase+'.npz'),X=X)
+            np.savez_compressed(filepath,X=X)
         return X  
 
 
