@@ -1,6 +1,5 @@
 import torch, warnings
 import torch.nn as nn
-from nistats import hemodynamic_models
 import numpy as np
 
 #adapted from https://github.com/smallflyingpig/SoundNet_Pytorch

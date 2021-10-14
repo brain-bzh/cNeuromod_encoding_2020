@@ -1,6 +1,6 @@
 import torch, warnings
 import torch.nn as nn
-from nistats import hemodynamic_models
+# from nistats import hemodynamic_models
 import numpy as np
 from models import soundnet_model as snd
  
@@ -138,13 +138,13 @@ class SoundNetEncoding(nn.Module):
                     fv_temp = []
                     frame_times = onset.numpy()
 
-                    for amplitude in fv.T:
-                        exp_conditions = (onset, duration, amplitude)
-                        signal, _ = hemodynamic_models.compute_regressor(exp_conditions, 
-                                    self.hrf_model, frame_times, oversampling=self.oversampling, min_onset=0)
-                        fv_temp.append(signal)
-                    b = np.squeeze(np.stack(fv_temp))
-                    all_fv = np.concatenate((all_fv, b),axis=1)
+                    # for amplitude in fv.T:
+                    #     exp_conditions = (onset, duration, amplitude)
+                    #     signal, _ = hemodynamic_models.compute_regressor(exp_conditions, 
+                    #                 self.hrf_model, frame_times, oversampling=self.oversampling, min_onset=0)
+                    #     fv_temp.append(signal)
+                    # b = np.squeeze(np.stack(fv_temp))
+                    # all_fv = np.concatenate((all_fv, b),axis=1)
 
                 emb = np.squeeze(np.stack(all_fv)).T
                 emb = torch.from_numpy(emb).float().cuda()

@@ -2,9 +2,9 @@
 #SBATCH --account=rrg-pbellec
 #SBATCH --mail-user=maelle.freteault@umontreal.ca
 #SBATCH --mail-type=END,FAIL
-#SBATCH --time=24:00:00
-#SBATCH --cpus-per-task=6
-#SBATCH --mem=32G
+#SBATCH --time=12:00:00
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=18G
 #SBATCH --array=1-12
 
 source /home/maellef/finetuned_train/bin/activate

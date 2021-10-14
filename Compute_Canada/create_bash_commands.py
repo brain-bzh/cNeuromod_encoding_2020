@@ -7,7 +7,7 @@
 #more args :
 #--sessionsTrain 1 -- sessionsVal 2 --select 2 45 8 105 --tr 1.49 --sr 22050
 #--bs (batch size) 30 --ks (kernel size) 5
-#-f (--finetuneStart) 5 -o (--outputLayer) 7
+#-f (--finetuneStart) conv5 -o (--outputLayer) conv7
 #--patience (early stopping) 15 --delta (early stopping) 0 --train100 0.6 --test100 0.2 --val100 0.2
 #--lr (learning rate) 1 --nbepoch 200 --wd (weight decay) 1e-2
 #--gpu --decoupledWD --powerTransform --lrScheduler --wandb --comet (True/False options)
