@@ -12,62 +12,65 @@
 #--lr (learning rate) 1 --nbepoch 200 --wd (weight decay) 1e-2
 #--gpu --decoupledWD --powerTransform --lrScheduler --wandb --comet (True/False options)
 
+exp_name = 'HP_training_Finetuning_P1'
+base_cmd = 'python ../model_training.py '
+fixed_options = '--lrScheduler --decoupledWD --gpu --wandb\n'
 
-#---------WIP-----------------------------
+subjects = ['01','02','03','04','05','06']
+scales = ['auditory_Voxels', 'MIST_ROI']
+select_data = dict()
+select_data["dataset"] = ['friends', 'friends', 
+                        'movie10', 'movie10', 'movie10', 'movie10'] 
+                        #'movie10', 'movie10', 'movie10', 'movie10']
+select_data["trainData"] = ['s01', 's02', 
+                        'bourne', 'wolf', 'life', 'hidden'] 
+                        #'bourne wolf life', 'bourne wolf hidden', 'bourne hidden life', 'wolf hidden life']
+select_data["evalData"] = ['s02', 's01', 
+                        'bourne', 'wolf', 'life', 'hidden'] 
+                        #'hidden', 'life', 'wolf', 'bourne']
 
+lrs = ["1e-1", "1e-2", "1e-3"]
+wds = ["1e-2", "1e-3", "1e-4"]
+es_patiences = ['10', '15', '20', '30']
+es_deltas = ['1e-2', '1e-1', '5e-1']
+#finetuneStarts = [None, 'conv7']
 
-#--------END-WIP--------------------------
+#python  model_training.py -s 01 -d movie10 --trainData wolf --evalData bourne --scale MIST_ROI
+cmds = []
+for subject in subjects : 
+    for dataset, trainData, evalData in zip(select_data["dataset"], select_data["trainData"], select_data["evalData"]):
+        for scale in scales : 
+            for lr in lrs:
+                for wd in wds:
+                    for patience in es_patiences:
+                        for delta in es_deltas:
+                            cmd = base_cmd
+                            cmd+='-s {} '.format(subject)
+                            cmd+='-d {} '.format(dataset)
+                            cmd+='--trainData {} '.format(trainData)
+                            cmd+='--evalData {} '.format(evalData)
+                            cmd+='--scale {} '.format(scale)
+                            cmd+='--lr {} '.format(lr)
+                            cmd+='--wd {} '.format(wd)
+                            cmd+='--patience {} '.format(patience)
+                            cmd+='--delta {} '.format(delta)
+                            #cmd = cmd+'-f {} '.format(f) if f != None else cmd
+                            #cmd = cmd+'--decoupledWD ' if DWD else cmd
+                            cmd += fixed_options
+                            cmds.append(cmd)
 
-cmd = dict()
-cmd["subject"] = ['01','02']#,'03','04','05','06']
-cmd["dataset"] = ["friends"]
-cmd["trainData"] = ['s01']
-cmd["evalData"] = ['s02']
-cmd["sessionsTrain"] = [1]
-cmd["sessionsEval"] = [1]
-cmd["bs"] = ['30']#["10", "30"]
-cmd["ks"] = ['5']#["1", "5"]
-cmd["lr"] = ["1e-1", "1e-2"]
-cmd["wd"] = ["1e-2", "1e-3"]
+with open("./{}_jobs.sh".format(exp_name), "w") as dy_job:
+    for c in cmds:
+        dy_job.write(c)
 
-
-cmd["replication"] = ["10"]
-
-# num = "_1"
-
-# cmds = []
-# for subject in cmd["subject"]:
-#     for dataset in cmd["dataset"]:
-#         for session in cmd["session"]:
-#             for i_task in range(len(cmd["task"])):
-#                 for clusters in cmd["clusters"]:
-#                     for states in cmd["states"]:
-#                         for batches in cmd["batches"]:
-#                             for replications in cmd["replication"]:
-#                                 for fwhm in cmd["fwhm"]:
-#                                     cmds.append(
-#                                         """python  model_training.py -s {sub} -d {dat} -f <None, Bourne, Hidden, Life, Wolf, All> --scale MIST_ROI --nInputs 210 --train100 1.0 --test100 0.5 --val100 0.5 \n""".format(
-#                                             sub=subject,
-#                                             dat=dataset,
-#                                             ses=session,
-#                                             tas=cmd["task"][i_task],
-#                                             val=cmd["val_task"][i_task],
-#                                             batch=batches,
-#                                             replication=replications,
-#                                             fwhm=fwhm
-#                                         )
-#                                     )
-
-# with open("cneuromod_embeddings/dypac_jobs{}.sh".format(num), "w") as dy_job:
-#     for c in cmds:
-#         dy_job.write(c)
-
-# with open("cneuromod_embeddings/dypac_submit_jobs{}.sh".format(num), "r") as dy_sub:
+# with open("./training_launcher.sh", "r") as dy_sub:
 #     lines = dy_sub.readlines()
 
 # for i in range(len(lines)):
 #     if "#SBATCH --array=" in lines[i]:
 #         lines[i] = "#SBATCH --array=1-{}\n".format(len(cmds))
+#     if 'sed -n "$SLURM_ARRAY_TASK_ID p"' in lines[i]:
+#         lines[i] = '    sed -n "$SLURM_ARRAY_TASK_ID p" < {}_jobs.sh | bash'.format(exp_name)
 
-# with open("cneuromod_embeddings/dypac_submit_jobs{}.sh".format(num), "w") as dy_sub:
+# with open("./training_launcher.sh", "w") as dy_sub:
 #     dy_sub.writelines(lines)
