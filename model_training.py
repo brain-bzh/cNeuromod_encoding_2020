@@ -88,7 +88,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     #warm_restart = training_hyperparameters['warm_restart']
 
     #----------define-paths-and-names----------------------
-    outfile_name = '{}_{}_{}_{:03}{:02}{:02}'.format(data_processing['dataset'], scale, model.__name__, batchsize, kernel_size, patience_es)
+    outfile_name = '{}_{}_{}_{:03}{:02}{:02}'.format(data_selection['dataset'], scale, model.__name__, batchsize, kernel_size, patience_es)
     outfile_name +='{:.0e}'.format(delta_es)[-3:]+'{:.0e}'.format(lr)[-3:]+'{:.0e}'.format(weight_decay)[-3:]+'_opt'
 
     outfile_name = outfile_name+'1' if decoupled_weightDecay else outfile_name+'0'
@@ -295,7 +295,7 @@ if __name__ == "__main__":
         #other
     parser.add_argument("--gpu", dest='gpu', action='store_true')
     parser.add_argument("--lr", type=float, default=1)
-    parser.add_argument("--nbepoch", type=int, default=200)
+    parser.add_argument("--nbepoch", type=int, default=1000)
     parser.add_argument("--wd", type=float, default=1e-2)
     parser.add_argument("--decoupledWD", dest='decoupledWD', action='store_true')
     parser.add_argument("--powerTransform", dest='powerTransform', action='store_true')

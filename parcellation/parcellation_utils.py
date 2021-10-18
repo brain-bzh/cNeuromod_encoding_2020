@@ -17,19 +17,19 @@ from nilearn.connectome import ConnectivityMeasure
 
 # basepath = '/~/nfarrugi/git/neuromod/cneuromod/movie10/derivatives/fmriprep1.5.0/fmriprep'
 cNeuromod_path = '/home/maellef/projects/rrg-pbellec/datasets/cneuromod_new/'
-#'/home/maellef/projects/rrg-pbellec/datasets/cneuromod/friends/derivatives/fmriprep-20.2lts/fmriprep/'
 mistroicsv = '/home/maellef/DataBase/fMRI_parcellations/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
 mistroi_labelsimg = '/home/maellef/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 auditory_mask = '/home/maellef/git_dir/cNeuromod_encoding_2020/parcellation/STG_middle.nii.gz'
-embedding_path = '/home/maellef/DataBase/fMRI_Embeddings_fmriprep-20.1.0/'
+embedding_path = '/home/maellef/DataBase/fMRI_Embeddings_fmriprep-20.2lts/'
 os.makedirs(embedding_path,exist_ok=True)
 
 def parcellate_auditory(filepath_fmri, auditorymask, subject, dataset, save=True,savepath='./results'):
     savepath = os.path.join(savepath, 'auditory_Voxels', dataset, subject)
     ## From the filepath_fmri, deduce the maskpath and the tsvfile 
     tsvfile_fmri = filepath_fmri[:-50] + 'desc-confounds_regressors.tsv'
-    idfunc = filepath_fmri.find('/func/')
-    filebase = filepath_fmri[idfunc+6:idfunc+34]
+    idstart = filepath_fmri.find('/func/')
+    idend = filepath_fmri.find('_space')
+    filebase = filepath_fmri[idstart+6:idend]
     filepath = os.path.join(savepath, filebase+'.npz')
     print(f"parcellation file is ", filebase)
 
@@ -41,7 +41,7 @@ def parcellate_auditory(filepath_fmri, auditorymask, subject, dataset, save=True
         mymasker = NiftiMasker(mask_img=auditorymask,standardize=True,detrend=False,t_r=1.49,smoothing_fwhm=8)
         mymasker.fit()
         # Load the confounds using the Params24 strategy 
-        confounds = Minimal().load(filepath_mri)
+        confounds = Minimal().load(filepath_fmri)
         ## Apply the masker 
         X = mymasker.fit_transform(filepath_fmri,confounds=confounds)
         
@@ -56,8 +56,9 @@ def parcellate_MIST(filepath_fmri, subject, dataset, labels_img=mistroi_labelsim
     ## From the filepath_fmri, deduce the maskpath and the tsvfile 
     maskpath_fmri = filepath_fmri[:-19]+'brain_mask.nii.gz'
     tsvfile_fmri = filepath_fmri[:-50] + 'desc-confounds_regressors.tsv'
-    idfunc = filepath_fmri.find('/func/')
-    filebase = filepath_fmri[idfunc+6:idfunc+34]
+    idstart = filepath_fmri.find('/func/')
+    idend = filepath_fmri.find('_space')
+    filebase = filepath_fmri[idstart+6:idend]
     filepath = os.path.join(savepath, filebase+'.npz')
     print(f"parcellation file is ", filebase)
 
@@ -87,7 +88,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     subject = "sub-"+args.subject
     dataset = args.dataset
-    mri_path = os.path.join(cNeuromod_path, dataset+'/derivatives/fmriprep-20.1.0/fmriprep/')
+    mri_path = os.path.join(cNeuromod_path, dataset+'/derivatives/fmriprep-20.2lts/fmriprep/')
     subjectdir = os.path.join(mri_path, subject)
 
     for s in os.listdir(subjectdir):
