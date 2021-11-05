@@ -32,11 +32,6 @@ soundNet_params_path = '/home/maellef/git_dir/cNeuromod_encoding_2020/sound8.pth
 mistroifile = '/home/maellef/Database/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 
 def model_training(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis):
-    # WIP CHECK ---> still needed ?
-    checkpt_still_here = os.path.lexists('/home/maellef/scratch/checkpoint.pt') #'checkpoint.pt'
-    if checkpt_still_here : 
-        print('suppression of checkpoint file')
-        os.remove('/home/maellef/scratch/checkpoint.pt')#'checkpoint.pt'
 
     #data selection
     all_subs_files = data_selection['all_data']
@@ -97,6 +92,12 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     outfile_name = outfile_name+'_f_'+finetune_start if finetune_start != None else outfile_name
 
     destdir = outpath
+
+    # WIP CHECK ---> still needed ?
+    checkpt_still_here = os.path.lexists('/home/maellef/scratch/checkpoint_{}.pt'.format(outfile_name)) #'checkpoint.pt'
+    if checkpt_still_here : 
+        print('suppression of checkpoint file')
+        os.remove('/home/maellef/scratch/checkpoint.pt')#'checkpoint.pt'
 
     #------------------select data (dataset, films, sessions/seasons)
 
@@ -211,7 +212,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
     #6 - Save Model
 
-    dt_string = enddate.strftime("_%Y%m%d%H%M%S")
+    dt_string = enddate.strftime("_%Y%m%d-%H:%M:%S")
     outfile_name += dt_string
     str_bestmodel = os.path.join(destdir,"{}.pt".format(outfile_name))
 
@@ -287,14 +288,14 @@ if __name__ == "__main__":
     #training_hyperparameters
         #early_stopping
     parser.add_argument("--patience", type=int, default=15)
-    parser.add_argument("--delta", type=float, default=0)
+    parser.add_argument("--delta", type=float, default=1e-1)
         #dataset_size    
     parser.add_argument("--train100", type=float, default=0.6)
     parser.add_argument("--test100", type=float, default=0.2)
     parser.add_argument("--val100", type=float, default=0.2)
         #other
     parser.add_argument("--gpu", dest='gpu', action='store_true')
-    parser.add_argument("--lr", type=float, default=1)
+    parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--nbepoch", type=int, default=1000)
     parser.add_argument("--wd", type=float, default=1e-2)
     parser.add_argument("--decoupledWD", dest='decoupledWD', action='store_true')
@@ -366,7 +367,7 @@ if __name__ == "__main__":
 
     outpath = '/home/maellef/Results/' #"/home/maelle/Results/"
     stimuli_path = '/home/maellef/DataBase/stimuli' #'/home/maelle/DataBase/stimuli'
-    embed_path = '/home/maellef/DataBase/fMRI_Embeddings' #'/home/maelle/DataBase/fMRI_Embeddings'
+    embed_path = '/home/maellef/DataBase/fMRI_Embeddings_fmriprep-20.2lts' #'/home/maelle/DataBase/fMRI_Embeddings'
     
     dataset_path = os.path.join(stimuli_path, ds['dataset'])
     parcellation_path = os.path.join(embed_path, dp['scale'], ds['dataset'], 'sub-'+args.sub)
