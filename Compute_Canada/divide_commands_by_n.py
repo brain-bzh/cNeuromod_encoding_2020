@@ -1,6 +1,6 @@
-file_path = './HP_training_Finetuning_P1_jobs.sh'
-path_name = './HP_training_Finetuning_P1_jobs'
-division_size = 1000
+file_path = './HP_training_FineFriends_sub_3_jobs_0.sh'
+path_name = './HP_training_FineFriends_sub_3_jobs_0'
+division_size = 120
 
 with open(file_path, "r") as file_data:
     jobs = file_data.readlines()

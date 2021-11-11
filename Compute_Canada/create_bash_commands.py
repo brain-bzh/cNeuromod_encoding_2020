@@ -12,28 +12,24 @@
 #--lr (learning rate) 1 --nbepoch 200 --wd (weight decay) 1e-2
 #--gpu --decoupledWD --powerTransform --lrScheduler --wandb --comet (True/False options)
 
-exp_name = 'HP_training_Finetuning_P1'
+exp_name = 'HP_training_FineFriends_sub_3'
 base_cmd = 'python ../model_training.py '
 fixed_options = '--lrScheduler --decoupledWD --gpu --wandb\n'
 
-subjects = ['01','02','03','04','05','06']
+subjects = ['03']
 scales = ['auditory_Voxels', 'MIST_ROI']
 select_data = dict()
-select_data["dataset"] = ['friends', 'friends', 
-                        'movie10', 'movie10', 'movie10', 'movie10'] 
-                        #'movie10', 'movie10', 'movie10', 'movie10']
-select_data["trainData"] = ['s01', 's02', 
-                        'bourne', 'wolf', 'life', 'hidden'] 
-                        #'bourne wolf life', 'bourne wolf hidden', 'bourne hidden life', 'wolf hidden life']
-select_data["evalData"] = ['s02', 's01', 
-                        'bourne', 'wolf', 'life', 'hidden'] 
-                        #'hidden', 'life', 'wolf', 'bourne']
+select_data["dataset"] = ['friends']
+select_data["trainData"] = ['s01 s02 s03']
+select_data["evalData"] = ['s04']
 
-lrs = ["1e-1", "1e-2", "1e-3"]
+bss = [1,10,30,70]
+kss = [1,3,5,9]
+lrs = ["1e-2", "1e-3", "1e-4"]
 wds = ["1e-2", "1e-3", "1e-4"]
-es_patiences = ['10', '15', '20', '30']
-es_deltas = ['1e-2', '1e-1', '5e-1']
-#finetuneStarts = [None, 'conv7']
+es_patiences = ['10', '15', '20']
+es_deltas = [0, '1e-1', '5e-1']
+finetuneStarts = [None, 'conv7', 'conv6', 'conv5', 'conv4']
 
 #python  model_training.py -s 01 -d movie10 --trainData wolf --evalData bourne --scale MIST_ROI
 cmds = []
@@ -44,20 +40,25 @@ for subject in subjects :
                 for wd in wds:
                     for patience in es_patiences:
                         for delta in es_deltas:
-                            cmd = base_cmd
-                            cmd+='-s {} '.format(subject)
-                            cmd+='-d {} '.format(dataset)
-                            cmd+='--trainData {} '.format(trainData)
-                            cmd+='--evalData {} '.format(evalData)
-                            cmd+='--scale {} '.format(scale)
-                            cmd+='--lr {} '.format(lr)
-                            cmd+='--wd {} '.format(wd)
-                            cmd+='--patience {} '.format(patience)
-                            cmd+='--delta {} '.format(delta)
-                            #cmd = cmd+'-f {} '.format(f) if f != None else cmd
-                            #cmd = cmd+'--decoupledWD ' if DWD else cmd
-                            cmd += fixed_options
-                            cmds.append(cmd)
+                            for bs in bss:
+                                for ks in kss:
+                                    #for f in finetuneStarts:
+                                    cmd = base_cmd
+                                    cmd+='-s {} '.format(subject)
+                                    cmd+='-d {} '.format(dataset)
+                                    cmd+='--trainData {} '.format(trainData)
+                                    cmd+='--evalData {} '.format(evalData)
+                                    cmd+='--scale {} '.format(scale)
+                                    cmd+='--lr {} '.format(lr)
+                                    cmd+='--wd {} '.format(wd)
+                                    cmd+='--patience {} '.format(patience)
+                                    cmd+='--delta {} '.format(delta)
+                                    cmd+='--bs {} '.format(bs)
+                                    cmd+='--ks {} '.format(ks)
+                                    #cmd = cmd+'-f {} '.format(f) if f != None else cmd
+                                    #cmd = cmd+'--decoupledWD ' if DWD else cmd
+                                    cmd += fixed_options
+                                    cmds.append(cmd)
 
 with open("./{}_jobs.sh".format(exp_name), "w") as dy_job:
     for c in cmds:

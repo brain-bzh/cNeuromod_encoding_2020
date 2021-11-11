@@ -7,4 +7,4 @@
 
 source /home/maellef/finetuned_train/bin/activate
 sed -n "$SLURM_ARRAY_TASK_ID p" < parcellation_jobs.sh | bash
-sq
+
