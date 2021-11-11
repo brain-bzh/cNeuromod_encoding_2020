@@ -29,7 +29,7 @@ from matplotlib import pyplot as plt
 # }
 
 soundNet_params_path = '/home/maellef/git_dir/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
-mistroifile = '/home/maellef/Database/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
+mistroifile = '/home/maellef/projects/ctb-pbellec/maellef/Database/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 
 def model_training(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis):
 
@@ -94,10 +94,13 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     destdir = outpath
 
     # WIP CHECK ---> still needed ?
-    checkpt_still_here = os.path.lexists('/home/maellef/scratch/checkpoint_{}.pt'.format(outfile_name)) #'checkpoint.pt'
+    date_start = datetime.now()
+    dt_string_start = date_start.strftime("%H%M%S")
+    checkpoint_path = '/home/maellef/scratch/checkpoint_{}_{}.pt'.format(outfile_name, dt_string_start)
+    checkpt_still_here = os.path.lexists(checkpoint_path) #'checkpoint.pt'
     if checkpt_still_here : 
         print('suppression of checkpoint file')
-        os.remove('/home/maellef/scratch/checkpoint.pt')#'checkpoint.pt'
+        os.remove(checkpoint_path)#'checkpoint.pt'
 
     #------------------select data (dataset, films, sessions/seasons)
 
@@ -141,7 +144,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     if lr_scheduler : 
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
-    early_stopping = EarlyStopping(patience=patience_es, verbose=True,delta=delta_es)
+    early_stopping = EarlyStopping(patience=patience_es, verbose=True,delta=delta_es, checkpoint_path=checkpoint_path)
 
     #---------------------------------------------------------------------------------------------------------------------------------
     #5 - Train & Test
@@ -246,18 +249,12 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
             }
     save(state, str_bestmodel)
 
-#---------WIP------------------------------------
-    checkpt_still_here = os.path.lexists('/home/maellef/scratch/checkpoint.pt') #'checkpoint.pt'
-    if checkpt_still_here : 
-        print('suppression of checkpoint file')
-        os.remove('/home/maellef/scratch/checkpoint.pt') #'checkpoint.pt'
-
 #------------------------------------------------------------------------------------------------------------------------------------
 #training_called_by_bash
 
 if __name__ == "__main__":
-    date = datetime.now()
-    dt_string = date.strftime("%Y%m%d")
+    date_end = datetime.now()
+    dt_string = date_end.strftime("%Y%m%d")
 
     #bash command example : python  model_training.py -s 01 -d friends --trainData s01 --evalData s02 --scale auditory_Voxels
     #bash command example : python  model_training.py -s 01 -d movie10 --trainData wolf --evalData bourne --scale MIST_ROI
@@ -295,7 +292,7 @@ if __name__ == "__main__":
     parser.add_argument("--val100", type=float, default=0.2)
         #other
     parser.add_argument("--gpu", dest='gpu', action='store_true')
-    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--lr", type=float, default=1e-2)
     parser.add_argument("--nbepoch", type=int, default=1000)
     parser.add_argument("--wd", type=float, default=1e-2)
     parser.add_argument("--decoupledWD", dest='decoupledWD', action='store_true')
@@ -356,7 +353,7 @@ if __name__ == "__main__":
     if args.wandb :
         os.environ['WANDB_MODE'] = 'offline' #for beluga environment
         import wandb 
-        wandb.init(project="neuroencoding_audio", config={})#group=, job_type=, name=, 
+        wandb.init(project="neuroencoding_audio", config={}, dir='/home/maellef/scratch/wandb')#group=, job_type=, name=, 
         wandb.config.update(args)
         ml_analysis += 'wandb'
 
@@ -366,8 +363,8 @@ if __name__ == "__main__":
         ml_analysis += 'comet'
 
     outpath = '/home/maellef/Results/' #"/home/maelle/Results/"
-    stimuli_path = '/home/maellef/DataBase/stimuli' #'/home/maelle/DataBase/stimuli'
-    embed_path = '/home/maellef/DataBase/fMRI_Embeddings_fmriprep-20.2lts' #'/home/maelle/DataBase/fMRI_Embeddings'
+    stimuli_path = '/home/maellef/projects/ctb-pbellec/maellef/Database/stimuli' #'/home/maelle/DataBase/stimuli'
+    embed_path = '/home/maellef/projects/ctb-pbellec/maellef/DataBase/fMRI_Embeddings_fmriprep-20.2lts' #'/home/maelle/DataBase/fMRI_Embeddings'
     
     dataset_path = os.path.join(stimuli_path, ds['dataset'])
     parcellation_path = os.path.join(embed_path, dp['scale'], ds['dataset'], 'sub-'+args.sub)

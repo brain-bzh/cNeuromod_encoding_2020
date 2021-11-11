@@ -71,8 +71,8 @@ def associate_stimuli_with_Parcellation(stimuli_path, path_parcellation):
     stimuli_wav = [os.path.join(stimuli_path, seg) for seg in sorted(os.listdir(stimuli_path)) if seg[-4:] == '.wav']
     parcellation_list = [os.path.join(path_parcellation, mri_data) for mri_data in sorted(os.listdir(path_parcellation)) if mri_data[-4:]==".npz"]
     pair_wav_mri = []
-    for i in range(len(stimuli_wav)):
-        pair_wav_mri.extend(fetchMRI(stimuli_wav[i], parcellation_list))
+    for wav in stimuli_wav:
+        pair_wav_mri.extend(fetchMRI(wav, parcellation_list))
     return pair_wav_mri
 
 def cNeuromod_subject_convention(path, name, zero_index = True):

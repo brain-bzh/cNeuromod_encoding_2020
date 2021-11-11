@@ -23,7 +23,7 @@ def load_audio_by_bit(audio, start, end, bitSize, sr=22050, mono=True) :
     return audio_segment
 
 if __name__ == "__main__":   
-    stimuli_path = '/home/maellef/projects/rrg-pbellec/datasets/cneuromod_new/friends/stimuli/s4'
+    stimuli_path = '/home/maellef/projects/rrg-pbellec/maellef/finefriends/data/cneuromod_new/friends/stimuli/s4'
     stimuli_outpath = '/home/maellef/DataBase/stimuli/friends/s04'
     os.makedirs(stimuli_outpath, exist_ok=True)
 
