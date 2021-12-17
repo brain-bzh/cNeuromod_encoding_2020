@@ -29,7 +29,7 @@ from matplotlib import pyplot as plt
 # }
 
 soundNet_params_path = '/home/maellef/git_dir/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
-mistroifile = '/home/maellef/projects/ctb-pbellec/maellef/Database/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
+mistroifile = '/home/maellef/projects/ctb-pbellec/maellef/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 
 def model_training(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis):
 
@@ -362,8 +362,8 @@ if __name__ == "__main__":
         experiment = comet_ml.Experiment("1NT8FqmXsAH088rHLBYC1Yyev")
         ml_analysis += 'comet'
 
-    outpath = '/home/maellef/Results/' #"/home/maelle/Results/"
-    stimuli_path = '/home/maellef/projects/ctb-pbellec/maellef/Database/stimuli' #'/home/maelle/DataBase/stimuli'
+    outpath = '/home/maellef/scratch/Results/' #"/home/maelle/Results/"
+    stimuli_path = '/home/maellef/projects/ctb-pbellec/maellef/DataBase/stimuli' #'/home/maelle/DataBase/stimuli'
     embed_path = '/home/maellef/projects/ctb-pbellec/maellef/DataBase/fMRI_Embeddings_fmriprep-20.2lts' #'/home/maelle/DataBase/fMRI_Embeddings'
     
     dataset_path = os.path.join(stimuli_path, ds['dataset'])
