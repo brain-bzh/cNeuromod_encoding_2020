@@ -17,10 +17,10 @@ from nilearn.connectome import ConnectivityMeasure
 
 # basepath = '/~/nfarrugi/git/neuromod/cneuromod/movie10/derivatives/fmriprep1.5.0/fmriprep'
 cNeuromod_path = '/home/maellef/projects/rrg-pbellec/datasets/cneuromod_new/'
-mistroicsv = '/home/maellef/DataBase/fMRI_parcellations/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
-mistroi_labelsimg = '/home/maellef/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
+mistroicsv = '/home/maellef/projects/rrg-pbellec/maellef/data/DataBase/fMRI_parcellations/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
+mistroi_labelsimg = '/home/maellef/projects/rrg-pbellec/maellef/data/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 auditory_mask = '/home/maellef/git_dir/cNeuromod_encoding_2020/parcellation/STG_middle.nii.gz'
-embedding_path = '/home/maellef/DataBase/fMRI_Embeddings_fmriprep-20.2lts/'
+embedding_path = '/home/maellef/projects/rrg-pbellec/maellef/data/DataBase/fMRI_Embeddings_fmriprep-20.2lts/'
 os.makedirs(embedding_path,exist_ok=True)
 
 def parcellate_auditory(filepath_fmri, auditorymask, subject, dataset, save=True,savepath='./results'):
