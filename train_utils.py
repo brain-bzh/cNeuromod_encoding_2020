@@ -48,7 +48,7 @@ class EarlyStopping:
         self.val_loss_min = val_loss
 
 
-def train(trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
+def train(trainloader,net,optimizer, epoch, mseloss,delta=1e-2, gpu=True):
     all_y = []
     all_y_predicted = []
     running_loss = 0
@@ -68,7 +68,7 @@ def train(trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
             x = x.cuda()                                           #then we put the tensor into the memory of the graphic card, so computations can be done faster
 
         # Forward pass
-        predicted_y = net(x)
+        predicted_y = net(x, epoch)
         predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()# as some dimensions in the output 
         #print(f'   len(predicted_y) : ', len(predicted_y))        
         
