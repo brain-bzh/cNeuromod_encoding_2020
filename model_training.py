@@ -1,11 +1,10 @@
 #Generic
-import os, warnings, argparse
+import os, argparse
 import numpy as np
 from datetime import datetime
 #Get input & preprocess
 import files_utils as fu
 #Create Dataset
-from random import sample
 from torch.utils.data import DataLoader
 from Datasets_utils import SequentialDataset, create_usable_audiofmri_datasets, create_train_eval_dataset
 #Models
@@ -13,11 +12,7 @@ from models import encoding_models as encod
 #Train & Test
 from tqdm import tqdm
 from torch import nn, optim, save
-from train_utils import train, test, test_r2, EarlyStopping
-#Visualisation
-from nilearn.plotting import plot_stat_map
-from nilearn.regions import signals_to_img_labels
-from matplotlib import pyplot as plt 
+from train_utils import train, test, test_r2, EarlyStopping 
 
 # all_early_stopping_criterions = {
 #     'train_loss':0, 
@@ -62,6 +57,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     fmrihidden = training_hyperparameters['fmrihidden']
     kernel_size = training_hyperparameters['kernel_size']
     finetune_start = training_hyperparameters['finetune_start'] 
+    epoch_start = training_hyperparameters['epoch_start']
     output_layer = training_hyperparameters['output_layer']
     patience_es = training_hyperparameters['patience']
     delta_es = training_hyperparameters['delta']
@@ -130,7 +126,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
         ', finetune_start : ', finetune_start, ' power_transform : ', power_transform, ', weight_decay', weight_decay)
     net = encod.SoundNetEncoding_conv(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, 
                                     output_layer=output_layer, kernel_size=kernel_size, power_transform=power_transform, 
-                                    train_start= finetune_start)
+                                    train_start= finetune_start, epoch_start=epoch_start)
     if gpu : 
         net.to("cuda")
     else:
@@ -164,7 +160,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     try:
         for epoch in tqdm(range(nbepoch)):
 
-            t_l, t_r2 = train(trainloader,net,optimizer,mseloss=mseloss, gpu=gpu)
+            t_l, t_r2 = train(trainloader,net,optimizer, epoch, mseloss=mseloss,gpu=gpu)
             train_loss.append(t_l)
             train_r2_max.append(max(t_r2))
             train_r2_mean.append(np.mean(t_r2))
@@ -280,8 +276,8 @@ if __name__ == "__main__":
     parser.add_argument("--bs", type=int, default=30)
     parser.add_argument("--ks", type=int, default=5)
     parser.add_argument("-f","--finetuneStart", type=str, default=None) #among "conv1", "pool1", ... "conv8", "conv8_2"
+    parser.add_argument("-e","--epochStart",type=int, default=None)
     parser.add_argument("-o", "--outputLayer", type=str, default="conv7")#output layer
-
     #training_hyperparameters
         #early_stopping
     parser.add_argument("--patience", type=int, default=15)
@@ -330,6 +326,7 @@ if __name__ == "__main__":
         'fmrihidden':args.hs,
         'batchsize':args.bs,
         'finetune_start':args.finetuneStart,
+        'epoch_start':args.epochStart,
         'output_layer':args.outputLayer,
         'kernel_size':args.ks,
         'patience':args.patience,

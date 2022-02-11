@@ -42,3 +42,26 @@ for name, param in zip(paramaters_name, soundnet.parameters()):
 
 for name, param in zip(paramaters_name, soundnet.parameters()):
     print(name, param.requires_grad)
+
+
+#-------to disable grad to certain layers in our net--(previously in models/encoding_model.py)-----------
+self.parameters_name = [] 
+for layer_weights in self.soundnet.state_dict() : 
+    if layer_weights.find('weight') > -1 or layer_weights.find('bias') > -1 : 
+        self.parameters_name.append(layer_weights)
+
+freeze the parameters of soundNet up to desired training layer 
+finetuning = False
+for name, param in zip(self.parameters_name, self.soundnet.parameters()):
+    if train_start is not None : 
+        if name.find(self.train_start)>-1 : 
+            #finetuning = True
+            break
+    param.requires_grad = False
+
+if finetuning :
+    print("Finetuning - backbone will be optimized up until "+str(train_start)+" included.") 
+else : 
+    print("Transfer learning - backbone is fixed")
+
+#------------------------------------------------------------------------------------------------------- 
