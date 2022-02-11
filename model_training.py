@@ -28,8 +28,8 @@ from matplotlib import pyplot as plt
 #     'val_r2_mean':5
 # }
 
-soundNet_params_path = '/home/maellef/git_dir/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
-mistroifile = '/home/maellef/projects/ctb-pbellec/maellef/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
+soundNet_params_path = '/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
+mistroifile = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 
 def model_training(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis):
 
@@ -84,7 +84,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
     #----------define-paths-and-names----------------------
     outfile_name = '{}_{}_{}_{:03}{:02}{:02}'.format(data_selection['dataset'], scale, model.__name__, batchsize, kernel_size, patience_es)
-    outfile_name +='{:.0e}'.format(delta_es)[-3:]+'{:.0e}'.format(lr)[-3:]+'{:.0e}'.format(weight_decay)[-3:]+'_opt'
+    outfile_name +='_{:.0e}'.format(delta_es)+'_{:.0e}'.format(lr)+'_{:.0e}'.format(weight_decay)+'_opt'
 
     outfile_name = outfile_name+'1' if decoupled_weightDecay else outfile_name+'0'
     outfile_name = outfile_name+'1' if lr_scheduler else outfile_name+'0'
@@ -95,8 +95,8 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
     # WIP CHECK ---> still needed ?
     date_start = datetime.now()
-    dt_string_start = date_start.strftime("%H%M%S")
-    checkpoint_path = '/home/maellef/scratch/checkpoint_{}_{}.pt'.format(outfile_name, dt_string_start)
+    dt_string_start = date_start.strftime("_%Y%m%d-%H%M%S")
+    checkpoint_path = '/home/maellef/scratch/fine_checkpoint_{}_{}.pt'.format(outfile_name, dt_string_start)
     checkpt_still_here = os.path.lexists(checkpoint_path) #'checkpoint.pt'
     if checkpt_still_here : 
         print('suppression of checkpoint file')
@@ -215,7 +215,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
     #6 - Save Model
 
-    dt_string = enddate.strftime("_%Y%m%d-%H:%M:%S")
+    dt_string = enddate.strftime("_%Y%m%d-%H%M%S")
     outfile_name += dt_string
     str_bestmodel = os.path.join(destdir,"{}.pt".format(outfile_name))
 
@@ -363,8 +363,8 @@ if __name__ == "__main__":
         ml_analysis += 'comet'
 
     outpath = '/home/maellef/scratch/Results/' #"/home/maelle/Results/"
-    stimuli_path = '/home/maellef/projects/ctb-pbellec/maellef/DataBase/stimuli' #'/home/maelle/DataBase/stimuli'
-    embed_path = '/home/maellef/projects/ctb-pbellec/maellef/DataBase/fMRI_Embeddings_fmriprep-20.2lts' #'/home/maelle/DataBase/fMRI_Embeddings'
+    stimuli_path = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/stimuli' #'/home/maelle/DataBase/stimuli'
+    embed_path = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_Embeddings_fmriprep-20.2lts' #'/home/maelle/DataBase/fMRI_Embeddings'
     
     dataset_path = os.path.join(stimuli_path, ds['dataset'])
     parcellation_path = os.path.join(embed_path, dp['scale'], ds['dataset'], 'sub-'+args.sub)
@@ -375,7 +375,7 @@ if __name__ == "__main__":
         if os.path.isdir(film_path):
             all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
 
-    resultpath = os.path.join(outpath, dt_string+"_test_hyperparameters_train")
+    resultpath = os.path.join(outpath, dt_string+"_finetuning")
     resultpath = os.path.join(resultpath, 'sub-'+args.sub)
     os.makedirs(resultpath, exist_ok=True)
     
