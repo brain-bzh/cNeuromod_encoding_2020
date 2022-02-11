@@ -5,9 +5,7 @@ from math import floor
 
 def convert_Audio(mediaFile, outFile):
     cmd = 'ffmpeg -i '+mediaFile+' '+outFile
-    print('beurp')
     os.system(cmd)
-    print('stroumph')
     return outFile
 
 def load_audio_by_bit(audio, start, end, bitSize, sr=22050, mono=True) : 
