@@ -165,7 +165,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
             train_r2_max.append(max(t_r2))
             train_r2_mean.append(np.mean(t_r2))
 
-            v_l, v_r2 = test(valloader,net,optimizer,mseloss=mseloss, gpu=gpu)
+            v_l, v_r2 = test(valloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu)
             val_loss.append(v_l)
             val_r2_max.append(max(v_r2))
             val_r2_mean.append(np.mean(v_r2))
@@ -199,7 +199,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     # if train_pass:
     #     test(1,testloader,net,optimizer,mseloss=mseloss, gpu=gpu)
     enddate = datetime.now()
-    test_loss, final_model = test(testloader,net,optimizer,mseloss=mseloss, gpu=gpu)
+    test_loss, final_model = test(testloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu)
     print("Test Loss : {}".format(test_loss))
     
     if ml_analysis == 'wandb':
@@ -215,7 +215,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     outfile_name += dt_string
     str_bestmodel = os.path.join(destdir,"{}.pt".format(outfile_name))
 
-    r2model = test_r2(testloader,net,mseloss, gpu=gpu)
+    r2model = test_r2(testloader,net, epoch, mseloss, gpu=gpu)
     r2model[r2model<0] = 0
 
     print("mean R2 score on test set  : {}".format(r2model.mean()))
@@ -372,7 +372,7 @@ if __name__ == "__main__":
         if os.path.isdir(film_path):
             all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
 
-    resultpath = os.path.join(outpath, dt_string+"_finetuning")
+    resultpath = os.path.join(outpath, dt_string+"_progFinetuning")
     resultpath = os.path.join(resultpath, 'sub-'+args.sub)
     os.makedirs(resultpath, exist_ok=True)
     

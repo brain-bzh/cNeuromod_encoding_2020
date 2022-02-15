@@ -131,8 +131,7 @@ def train_without_grad(trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
         return running_loss/batch_nb, r2_model
 
 
-
-def test(trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
+def test(trainloader,net,optimizer, epoch ,mseloss,delta=1e-2, gpu=True):
     all_y = []
     all_y_predicted = []
     running_loss = 0
@@ -148,7 +147,7 @@ def test(trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
             if gpu:
                 x = x.cuda()  
             # Forward pass
-            predicted_y = net(x)
+            predicted_y = net(x, epoch)
             predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()
             predicted_y = predicted_y[:batch_size]
             y = y.double()
@@ -166,7 +165,7 @@ def test(trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
         return running_loss/batch_nb, r2_model
 
 
-def test_r2(testloader,net,mseloss, gpu=True):
+def test_r2(testloader,net, epoch, mseloss, gpu=True):
     all_fmri = []
     all_fmri_p = []
     net.eval()
@@ -185,7 +184,7 @@ def test_r2(testloader,net,mseloss, gpu=True):
                 fmri=fmri.cuda()
 
             # Forward pass
-            fmri_p = net(wav).permute(2,1,0,3).squeeze()
+            fmri_p = net(wav, epoch).permute(2,1,0,3).squeeze()
 
             #Cropping the end of the predicted fmri to match the measured bold
             fmri_p = fmri_p[:bsize]
