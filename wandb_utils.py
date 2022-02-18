@@ -3,9 +3,6 @@ import os
 import wandb
 from matplotlib import pyplot as plt
 
-# Project is specified by <entity/project-name>
-project = "gaimee/neuroencoding_audio"
-
 #derived from wandb documentation
 def load_df_from_wandb(project):
     api = wandb.Api()
@@ -34,3 +31,11 @@ def load_df_from_wandb(project):
     runs_df = pd.concat((id_pd, name_pd, config_pd, summary_pd), axis=1)
     return(runs_df)
 
+if __name__ == "__main__":
+    # Project is specified by <entity/project-name>
+    project = "gaimee/neuroencoding_audio"
+    outpath = '/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/'
+    df_save = os.path.join(outpath, 'configs_from_HPtrain_2021')
+
+    runs_df = load_df_from_wandb(project)
+    runs_df.to_csv(df_save, sep=';')
