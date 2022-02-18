@@ -1,39 +1,16 @@
 import pandas as pd 
 import os
-import wandb
 from torch import load, device
 import numpy as np
+from wandb_utils import load_df_from_wandb
 
-api = wandb.Api()
+
 selected_scale = 'MIST_ROI' #'auditory_Voxels' 
-# Project is specified by <entity/project-name>
-runs = api.runs("gaimee/neuroencoding_audio")
+#runs_df = load_df_from_wandb("gaimee/neuroencoding_audio")
 
-summary_list, config_list, name_list, id_list = [], [], [], []
-
-for run in runs: 
-    # .summary contains the output keys/values for metrics like accuracy.
-    #  We call ._json_dict to omit large files 
-    summary_list.append(run.summary._json_dict)
-
-    # .config contains the hyperparameters.
-    #  We remove special values that start with _.
-    config_list.append(
-        {k: v for k,v in run.config.items()
-          if not k.startswith('_')})
-
-    # .name is the human-readable name of the run.
-    name_list.append(run.name)
-    id_list.append(run.id)
-
-summary_pd = pd.DataFrame(summary_list)
-config_pd = pd.DataFrame(config_list)
-name_pd = pd.Series(name_list, name='name')
-id_pd = pd.Series(id_list, name='id')
-runs_df = pd.concat((id_pd, name_pd, config_pd, summary_pd), axis=1)
-
-analysis_df = runs_df[runs_df['scale'] == selected_scale]
-#analysis_df = df[df['finetuneStart'] == None]
+runs_df = pd.read_csv('/home/maelle/GitHub_repositories/cNeuromod_encoding_2020/ordered_configs_from_HPtrain_2021', sep=';')
+selected_df = runs_df[runs_df['scale'] == selected_scale]
+analysis_df = selected_df[selected_df['finetuneStart'].isnull()]
 sorted_df = analysis_df.sort_values(by=['val r2 max'], ascending=False)
 
 # pour un id, récupère la série de "test_r2"
@@ -43,7 +20,7 @@ results_path = '/home/maellef/scratch/Results'
 subject = 'sub-03'
 
 ordered_runs = []
-for _, row in sorted_df.iterrows():
+for idx, row in sorted_df.iterrows():
     outfile_name = '{:03}{:02}{:02}'.format(row['bs'], row['ks'], row['patience'])
     outfile_name +='{:.0e}'.format(row['delta'])[-3:]+'{:.0e}'.format(row['lr'])[-3:]+'{:.0e}'.format(row['wd'])[-3:]+'_opt'
 
@@ -54,29 +31,27 @@ for _, row in sorted_df.iterrows():
     delta = '{:.0e}'.format(row['delta'])
     wandb_id = row['id']
     #print(wandb_id, row['name'], row['finetuneStart'], type(row['finetuneStart']))
-    if row['finetuneStart'] != None : 
+
+    results_files = []
+    for filename in os.listdir(wandb_path):
+        if filename.find(wandb_id) > -1 : 
+            completion_day = filename[12:20]
+            completion_hour = filename[21:27]
+            for directories in os.listdir(results_path):
+                if directories.find(completion_day) >-1 :     
+                    id_directory = os.path.join(results_path, directories, subject)
+                    for result_file in os.listdir(id_directory):
+                        if result_file.find(outfile_name)>-1:
+                            results_files.append(result_file)
+    try:
+        if delta[0] == '5':
+            selected_file = os.path.join(id_directory, results_files[1])
+        else :         
+            selected_file = os.path.join(id_directory, results_files[0])
+        ordered_runs.append(selected_file)
+    
+    except IndexError : 
         pass
-    else : 
-        results_files = []
-        for filename in os.listdir(wandb_path):
-            if filename.find(wandb_id) > -1 : 
-                completion_day = filename[12:20]
-                completion_hour = filename[21:27]
-                for directories in os.listdir(results_path):
-                    if directories.find(completion_day) >-1 :     
-                        id_directory = os.path.join(results_path, directories, subject)
-                        for result_file in os.listdir(id_directory):
-                            if result_file.find(outfile_name)>-1:
-                                results_files.append(result_file)
-        try:
-            if delta[0] == '5':
-                selected_file = os.path.join(id_directory, results_files[1])
-            else :         
-                selected_file = os.path.join(id_directory, results_files[0])
-            ordered_runs.append(selected_file)
-        
-        except IndexError : 
-            pass
 
 all_data = np.array([]).reshape(0,210)
 for datafile in ordered_runs : 
