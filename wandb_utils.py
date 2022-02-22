@@ -31,6 +31,15 @@ def load_df_from_wandb(project):
     runs_df = pd.concat((id_pd, name_pd, config_pd, summary_pd), axis=1)
     return(runs_df)
 
+def order_results_files_from_wandb(results_path, wandb_path, subject, scale, project=None, csv=None) : 
+    if project == None : 
+        runs_df = pd.read_csv(csv, sep=';')
+    elif csv = None :
+        runs_df = load_df_from_wandb(project)
+    
+    
+
+
 if __name__ == "__main__":
     # Project is specified by <entity/project-name>
     project = "gaimee/neuroencoding_audio"

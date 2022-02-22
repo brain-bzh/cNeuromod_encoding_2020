@@ -50,7 +50,7 @@ for layer_weights in self.soundnet.state_dict() :
     if layer_weights.find('weight') > -1 or layer_weights.find('bias') > -1 : 
         self.parameters_name.append(layer_weights)
 
-freeze the parameters of soundNet up to desired training layer 
+#freeze the parameters of soundNet up to desired training layer 
 finetuning = False
 for name, param in zip(self.parameters_name, self.soundnet.parameters()):
     if train_start is not None : 
