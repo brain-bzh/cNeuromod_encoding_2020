@@ -1,4 +1,5 @@
 import os
+from numpy import isnan
 from audio_utils import convert_Audio
 
 all_films = {
@@ -7,10 +8,6 @@ all_films = {
     'life':'life',
     'figures':'hidden_figures',
 }
-
-def create_dir_if_needed(path):
-    if not os.path.isdir(path):
-        os.makedirs(path)
 
 def print_dict(dico):
     for key, value in dico.items():
@@ -36,7 +33,23 @@ def extract_value_from_string(string, start_index, stop_condition=(lambda x: Fal
 
     return target_value
 
-#def separate_seasons(list, keyword='s0'):
+def result_name(dataset, scale, model, batchsize, kernel_size, patience_es, delta_es, learning_rate, weigth_decay, 
+                            decoupled_wd, lr_scheduler, power_transform, finetune_start, year = 2022):
+    
+    outfile_name = '{}_{}_{}_'.format(dataset, scale, model)
+    outfile_name +='{:03}{:02}{:02}'.format(batchsize, kernel_size, patience_es)
+    if year == 2021 :
+        outfile_name +='{:.0e}'.format(delta_es)[-3:]+'{:.0e}'.format(learning_rate)[-3:]+'{:.0e}'.format(weigth_decay)[-3:]
+    else : 
+        outfile_name +='_{:.0e}'.format(delta_es)+'_{:.0e}'.format(learning_rate)+'_{:.0e}'.format(weigth_decay)
+    outfile_name += '_opt'
+    outfile_name = outfile_name+'1' if decoupled_wd else outfile_name+'0'
+    outfile_name = outfile_name+'1' if lr_scheduler else outfile_name+'0'
+    outfile_name = outfile_name+'1' if power_transform else outfile_name+'0'
+    if finetune_start != None or not isnan(finetune_start) : 
+        outfile_name = outfile_name+'_f_'+finetune_start
+
+    return outfile_name
 
 def fetchMRI(videofile,fmrilist):
     ### isolate the mkv file (->filename) and the rest of the path (->videopath)

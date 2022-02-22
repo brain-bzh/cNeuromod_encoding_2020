@@ -79,14 +79,8 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     #warm_restart = training_hyperparameters['warm_restart']
 
     #----------define-paths-and-names----------------------
-    outfile_name = '{}_{}_{}_{:03}{:02}{:02}'.format(data_selection['dataset'], scale, model.__name__, batchsize, kernel_size, patience_es)
-    outfile_name +='_{:.0e}'.format(delta_es)+'_{:.0e}'.format(lr)+'_{:.0e}'.format(weight_decay)+'_opt'
-
-    outfile_name = outfile_name+'1' if decoupled_weightDecay else outfile_name+'0'
-    outfile_name = outfile_name+'1' if lr_scheduler else outfile_name+'0'
-    outfile_name = outfile_name+'1' if power_transform else outfile_name+'0'
-    outfile_name = outfile_name+'_f_'+finetune_start if finetune_start != None else outfile_name
-
+    outfile_name = fu.result_name (data_selection['dataset'], scale, model.__name__, batchsize, kernel_size, patience_es,
+    delta_es, lr, weight_decay, decoupled_weightDecay, lr_scheduler, power_transform, finetune_start)
     destdir = outpath
 
     # WIP CHECK ---> still needed ?
