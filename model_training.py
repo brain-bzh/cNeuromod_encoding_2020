@@ -24,7 +24,7 @@ from train_utils import train, test, test_r2, EarlyStopping
 # }
 
 soundNet_params_path = '/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
-mistroifile = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
+scratch_path = '/home/maellef/scratch'
 
 def model_training(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis):
 
@@ -61,7 +61,6 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     output_layer = training_hyperparameters['output_layer']
     patience_es = training_hyperparameters['patience']
     delta_es = training_hyperparameters['delta']
-    gpu = training_hyperparameters['gpu']
     batchsize = training_hyperparameters['batchsize']
     lr = training_hyperparameters['lr']
     weight_decay = training_hyperparameters['weight_decay']
@@ -70,23 +69,26 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     test_percent = training_hyperparameters['test_percent']
     val_percent = training_hyperparameters['val_percent']
     mseloss = training_hyperparameters['mseloss']
+    
+    #training_options
     decoupled_weightDecay = training_hyperparameters['decoupled_weightDecay']
     power_transform = training_hyperparameters['power_transform']
     lr_scheduler = training_hyperparameters['lr_scheduler']
-    
+    gpu = training_hyperparameters['gpu']
     #WIP_conditions :
     #train_pass = training_hyperparameters['train_pass']
     #warm_restart = training_hyperparameters['warm_restart']
 
     #----------define-paths-and-names----------------------
+    date_start = datetime.now()
+    dt_string_start = date_start.strftime("_%Y%m%d-%H%M%S")
     outfile_name = fu.result_name (data_selection['dataset'], scale, model.__name__, batchsize, kernel_size, patience_es,
     delta_es, lr, weight_decay, decoupled_weightDecay, lr_scheduler, power_transform, finetune_start)
     destdir = outpath
+    #define wandb.init.name or id ? with dt_string_start ?
 
-    # WIP CHECK ---> still needed ?
-    date_start = datetime.now()
-    dt_string_start = date_start.strftime("_%Y%m%d-%H%M%S")
-    checkpoint_path = '/home/maellef/scratch/fine_checkpoint_{}_{}.pt'.format(outfile_name, dt_string_start)
+    #-----------------CHECKPOINT--------------------
+    checkpoint_path = os.path.join(scratch_path, 'checkpoint_{}_{}.pt'.format(outfile_name, dt_string_start))
     checkpt_still_here = os.path.lexists(checkpoint_path) #'checkpoint.pt'
     if checkpt_still_here : 
         print('suppression of checkpoint file')
@@ -150,6 +152,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     val_r2_mean = []
     # criterions = [train_loss, -train_r2_max[-1], -train_r2_mean[-1], val_loss, -val_r2_max[-1], -val_r2_mean[-1]]
     lrs = []
+    parameters_evolution = {}
 
     try:
         for epoch in tqdm(range(nbepoch)):
@@ -181,6 +184,12 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
             if lr_scheduler : 
                 scheduler.step(v_l)
 
+            for name, param in net.named_parameters():
+                if name in parameters_evolution.keys():
+                    parameters_evolution[name].append(param) 
+                else:
+                    parameters_evolution[name]=[param]
+
             early_stopping(v_l, net)
             if early_stopping.early_stop:
                 print("Early stopping")
@@ -192,6 +201,8 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     # WIP : 
     # if train_pass:
     #     test(1,testloader,net,optimizer,mseloss=mseloss, gpu=gpu)
+    #loading the best model that has been saved through early stopping + evaluation on new part of the dataset
+    net.load_state_dict(torch.load(checkpoint_path))
     enddate = datetime.now()
     test_loss, final_model = test(testloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu)
     print("Test Loss : {}".format(test_loss))
@@ -210,7 +221,6 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     str_bestmodel = os.path.join(destdir,"{}.pt".format(outfile_name))
 
     r2model = test_r2(testloader,net, epoch, mseloss, gpu=gpu)
-    r2model[r2model<0] = 0
 
     print("mean R2 score on test set  : {}".format(r2model.mean()))
     print("max R2 score on test set  : {}".format(r2model.max()))
@@ -233,6 +243,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
                 'test_r2_mean' : r2model.mean(),
                 'lrs' : lrs,
                 'training_time' : enddate - startdate,
+                'params_evolution' : parameters_evolution,
                 'hyperparameters' : training_hyperparameters,
                 'data_processing' : data_selection,
                 'data_selection' : data_selection
