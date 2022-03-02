@@ -29,8 +29,7 @@ class SoundNetEncoding_conv(nn.Module):
         self.encoding_fmri = nn.Conv1d(self.soundnet.layers_size[output_layer],self.out_size,
                                         kernel_size=(kernel_size,1), padding=(kernel_size-1,0))
         print('shape of encoding matrice from last encoding layer : {} X {}'.format(self.soundnet.layers_size[output_layer], self.out_size))
-        nn.init.kaiming_normal_(self.encoding_fmri, mode='fan_in', nonlinearity='relu')
-        
+
         if nroi_attention is not None:
             self.maskattention = torch.nn.Parameter(torch.rand(out_size,nroi_attention))
         else:
