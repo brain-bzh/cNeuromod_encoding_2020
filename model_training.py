@@ -11,7 +11,7 @@ from Datasets_utils import SequentialDataset, create_usable_audiofmri_datasets, 
 from models import encoding_models as encod
 #Train & Test
 from tqdm import tqdm
-from torch import nn, optim, save
+from torch import nn, optim, save, load
 from train_utils import train, test, test_r2, EarlyStopping 
 
 # all_early_stopping_criterions = {
@@ -57,7 +57,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     fmrihidden = training_hyperparameters['fmrihidden']
     kernel_size = training_hyperparameters['kernel_size']
     finetune_start = training_hyperparameters['finetune_start'] 
-    epoch_start = training_hyperparameters['epoch_start']
+    finetune_delay = training_hyperparameters['finetune_delay']
     output_layer = training_hyperparameters['output_layer']
     patience_es = training_hyperparameters['patience']
     delta_es = training_hyperparameters['delta']
@@ -75,6 +75,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     power_transform = training_hyperparameters['power_transform']
     lr_scheduler = training_hyperparameters['lr_scheduler']
     gpu = training_hyperparameters['gpu']
+    wb_id = wandb.run.id
     #WIP_conditions :
     #train_pass = training_hyperparameters['train_pass']
     #warm_restart = training_hyperparameters['warm_restart']
@@ -83,7 +84,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     date_start = datetime.now()
     dt_string_start = date_start.strftime("_%Y%m%d-%H%M%S")
     outfile_name = fu.result_name (data_selection['dataset'], scale, model.__name__, batchsize, kernel_size, patience_es,
-    delta_es, lr, weight_decay, decoupled_weightDecay, lr_scheduler, power_transform, finetune_start)
+    delta_es, lr, weight_decay, decoupled_weightDecay, lr_scheduler, power_transform, finetune_start, wb_id)
     destdir = outpath
     #define wandb.init.name or id ? with dt_string_start ?
 
@@ -122,7 +123,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
         ', finetune_start : ', finetune_start, ' power_transform : ', power_transform, ', weight_decay', weight_decay)
     net = encod.SoundNetEncoding_conv(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, 
                                     output_layer=output_layer, kernel_size=kernel_size, power_transform=power_transform, 
-                                    train_start= finetune_start, epoch_start=epoch_start)
+                                    train_start= finetune_start, finetune_delay=finetune_delay)
     if gpu : 
         net.to("cuda")
     else:
@@ -153,6 +154,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     # criterions = [train_loss, -train_r2_max[-1], -train_r2_mean[-1], val_loss, -val_r2_max[-1], -val_r2_mean[-1]]
     lrs = []
     parameters_evolution = {}
+    r2_evolution = []
 
     try:
         for epoch in tqdm(range(nbepoch)):
@@ -164,6 +166,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
             v_l, v_r2 = test(valloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu)
             val_loss.append(v_l)
+            r2_evolution.append(v_r2)
             val_r2_max.append(max(v_r2))
             val_r2_mean.append(np.mean(v_r2))
             
@@ -179,7 +182,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
             elif ml_analysis == 'comet':
                 pass
             else : 
-                pass
+                print('no online record of training progression')
 
             if lr_scheduler : 
                 scheduler.step(v_l)
@@ -201,8 +204,8 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     # WIP : 
     # if train_pass:
     #     test(1,testloader,net,optimizer,mseloss=mseloss, gpu=gpu)
-    #loading the best model that has been saved through early stopping + evaluation on new part of the dataset
-    net.load_state_dict(torch.load(checkpoint_path))
+    #loading the best model that has been saved through early stopping with torch.load + evaluation on new part of the dataset
+    net.load_state_dict(load(checkpoint_path))
     enddate = datetime.now()
     test_loss, final_model = test(testloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu)
     print("Test Loss : {}".format(test_loss))
@@ -244,6 +247,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
                 'lrs' : lrs,
                 'training_time' : enddate - startdate,
                 'params_evolution' : parameters_evolution,
+                'val_r2_evolution' : r2_evolution, 
                 'hyperparameters' : training_hyperparameters,
                 'data_processing' : data_selection,
                 'data_selection' : data_selection
@@ -281,7 +285,7 @@ if __name__ == "__main__":
     parser.add_argument("--bs", type=int, default=30)
     parser.add_argument("--ks", type=int, default=5)
     parser.add_argument("-f","--finetuneStart", type=str, default=None) #among "conv1", "pool1", ... "conv8", "conv8_2"
-    parser.add_argument("-e","--epochStart",type=int, default=None)
+    parser.add_argument("-e","--finetuneDelay",type=int, default=None)
     parser.add_argument("-o", "--outputLayer", type=str, default="conv7")#output layer
     #training_hyperparameters
         #early_stopping
@@ -331,7 +335,7 @@ if __name__ == "__main__":
         'fmrihidden':args.hs,
         'batchsize':args.bs,
         'finetune_start':args.finetuneStart,
-        'epoch_start':args.epochStart,
+        'finetune_delay':args.finetuneDelay,
         'output_layer':args.outputLayer,
         'kernel_size':args.ks,
         'patience':args.patience,
@@ -377,7 +381,7 @@ if __name__ == "__main__":
         if os.path.isdir(film_path):
             all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
 
-    resultpath = os.path.join(outpath, dt_string+"_progFinetuning")
+    resultpath = os.path.join(outpath, dt_string+"_step2")
     resultpath = os.path.join(resultpath, 'sub-'+args.sub)
     os.makedirs(resultpath, exist_ok=True)
     

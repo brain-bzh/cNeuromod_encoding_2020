@@ -8,7 +8,7 @@ from models import soundnet_model as snd
  
 class SoundNetEncoding_conv(nn.Module):
     def __init__(self, out_size, output_layer, fmrihidden=1000, kernel_size = 1, 
-                train_start = None, epoch_start=None, nroi_attention=None, power_transform=False, hrf_model=None, 
+                train_start = None, finetune_delay=None, nroi_attention=None, power_transform=False, hrf_model=None, 
                 oversampling = 16, tr = 1.49, audiopad = 0, pytorch_param_path = None):
         super(SoundNetEncoding_conv, self).__init__()
 
@@ -16,7 +16,8 @@ class SoundNetEncoding_conv(nn.Module):
         self.fmrihidden = fmrihidden
         self.out_size = out_size
         self.train_start = train_start
-        self.epoch_start = epoch_start
+        self.train_current = None
+        self.finetune_delay = finetune_delay
         self.output_layer = output_layer
         self.layers_features = {}
         self.power_transform = power_transform
@@ -29,7 +30,7 @@ class SoundNetEncoding_conv(nn.Module):
         self.encoding_fmri = nn.Conv1d(self.soundnet.layers_size[output_layer],self.out_size,
                                         kernel_size=(kernel_size,1), padding=(kernel_size-1,0))
         print('shape of encoding matrice from last encoding layer : {} X {}'.format(self.soundnet.layers_size[output_layer], self.out_size))
-        nn.init.kaiming_normal_(self.encoding_fmri, mode='fan_in', nonlinearity='relu')
+        nn.init.kaiming_normal_(self.encoding_fmri.weight, mode='fan_in', nonlinearity='relu')
         
         if nroi_attention is not None:
             self.maskattention = torch.nn.Parameter(torch.rand(out_size,nroi_attention))
@@ -44,11 +45,18 @@ class SoundNetEncoding_conv(nn.Module):
         else :
             self.hrf_model=None
 
-    def forward(self, x, epoch):        
-        if self.epoch_start == None or epoch < self.epoch_start:
-            emb = self.soundnet(x, self.output_layer)
-        else : 
+    def forward(self, x, epoch):     
+        layers = ["conv1", "conv2", "conv3", "conv4", "conv5", "conv6", "conv7"] 
+        idx_train_start = layers.index(self.train_start) if self.train_start is not None else 0
+
+        if self.finetune_delay is None or self.finetune_delay == 0: 
             emb = self.soundnet(x, self.output_layer, self.train_start)
+        else : 
+            modulo = epoch%self.finetune_delay
+            if modulo == 0:
+                i = len(layers) - epoch//self.finetune_delay
+                self.train_current = layers[i] if i >= idx_train_start else idx_train_start
+            emb = self.soundnet(x, self.output_layer, self.train_current)        
         emb = torch.sqrt(emb) if self.power_transform else emb
         out = self.encoding_fmri(emb)
         return out

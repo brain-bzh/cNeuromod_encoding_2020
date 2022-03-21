@@ -68,7 +68,7 @@ class SoundNet8_pytorch(nn.Module):
     def forward(self, x, output_layer = "conv8", train_start = None):
         warnings.filterwarnings("ignore")
         
-        train_start_index = self.indexes[train_start] if train_start != None else self.indexes["conv8"]
+        train_start_index = self.indexes[train_start] if train_start is not None else self.indexes["conv8"]
         #train_start_index is the index of the FIRST layer to be trained, 
         # if train_start == None --> transfer learning without finetuning
         output_index = self.indexes[output_layer] if output_layer != "conv8" else self.indexes["conv7"]
