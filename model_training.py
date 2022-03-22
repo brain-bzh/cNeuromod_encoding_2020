@@ -156,57 +156,60 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     lrs = []
     parameters_evolution = {}
     r2_evolution = []
+    epoch = 0
 
-    try:
-        for epoch in tqdm(range(nbepoch)):
+    if not no_training : 
+        try:
+            for epoch in tqdm(range(nbepoch)):
 
-            t_l, t_r2 = train(trainloader,net,optimizer, epoch, mseloss=mseloss,gpu=gpu)
-            train_loss.append(t_l)
-            train_r2_max.append(max(t_r2))
-            train_r2_mean.append(np.mean(t_r2))
+                t_l, t_r2 = train(trainloader,net,optimizer, epoch, mseloss=mseloss,gpu=gpu)
+                train_loss.append(t_l)
+                train_r2_max.append(max(t_r2))
+                train_r2_mean.append(np.mean(t_r2))
 
-            v_l, v_r2 = test(valloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu)
-            val_loss.append(v_l)
-            r2_evolution.append(v_r2)
-            val_r2_max.append(max(v_r2))
-            val_r2_mean.append(np.mean(v_r2))
-            
-            lrs.append(optimizer.param_groups[0]["lr"])
+                v_l, v_r2 = test(valloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu)
+                val_loss.append(v_l)
+                r2_evolution.append(v_r2)
+                val_r2_max.append(max(v_r2))
+                val_r2_mean.append(np.mean(v_r2))
 
-            print("Train Loss {} Train Mean R2 :  {} Train Max R2 : {}, Val Loss {} Val Mean R2:  {} Val Max R2 : {} ".format(train_loss[-1],train_r2_mean[-1],train_r2_max[-1],val_loss[-1],val_r2_mean[-1],val_r2_max[-1]))
+                lrs.append(optimizer.param_groups[0]["lr"])
 
-            if ml_analysis == 'wandb':
-                wandb.log({"train loss": t_l, "train r2 max": max(t_r2), "train r2 mean":np.mean(t_r2),
-                            "val loss": v_l, "val r2 max": max(v_r2), "val r2 mean":np.mean(v_r2),
-                            "learning rate" : optimizer.param_groups[0]["lr"], "nb epochs": epoch
-                })
-            elif ml_analysis == 'comet':
-                pass
-            else : 
-                print('no online record of training progression')
+                print("Train Loss {} Train Mean R2 :  {} Train Max R2 : {}, Val Loss {} Val Mean R2:  {} Val Max R2 : {} ".format(train_loss[-1],train_r2_mean[-1],train_r2_max[-1],val_loss[-1],val_r2_mean[-1],val_r2_max[-1]))
 
-            if lr_scheduler : 
-                scheduler.step(v_l)
+                if ml_analysis == 'wandb':
+                    wandb.log({"train loss": t_l, "train r2 max": max(t_r2), "train r2 mean":np.mean(t_r2),
+                                "val loss": v_l, "val r2 max": max(v_r2), "val r2 mean":np.mean(v_r2),
+                                "learning rate" : optimizer.param_groups[0]["lr"], "nb epochs": epoch
+                    })
+                elif ml_analysis == 'comet':
+                    pass
+                else : 
+                    print('no online record of training progression')
 
-            for name, param in net.named_parameters():
-                if name in parameters_evolution.keys():
-                    parameters_evolution[name].append(param) 
-                else:
-                    parameters_evolution[name]=[param]
+                if lr_scheduler : 
+                    scheduler.step(v_l)
 
-            early_stopping(v_l, net)
-            if early_stopping.early_stop:
-                print("Early stopping")
-                break
+                for name, param in net.named_parameters():
+                    if name in parameters_evolution.keys():
+                        parameters_evolution[name].append(param) 
+                    else:
+                        parameters_evolution[name]=[param]
 
-    except KeyboardInterrupt:
-        print("Interrupted by user")
-        
-    # WIP : 
-    # if train_pass:
-    #     test(1,testloader,net,optimizer,mseloss=mseloss, gpu=gpu)
-    #loading the best model that has been saved through early stopping with torch.load + evaluation on new part of the dataset
-    net.load_state_dict(load(checkpoint_path))
+                early_stopping(v_l, net)
+                if early_stopping.early_stop:
+                    print("Early stopping")
+                    break
+
+        except KeyboardInterrupt:
+            print("Interrupted by user")
+
+        # WIP : 
+        # if train_pass:
+        #     test(1,testloader,net,optimizer,mseloss=mseloss, gpu=gpu)
+        #loading the best model that has been saved through early stopping with torch.load + evaluation on new part of the dataset
+        net.load_state_dict(load(checkpoint_path))
+
     enddate = datetime.now()
     test_loss, final_model = test(testloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu)
     print("Test Loss : {}".format(test_loss))

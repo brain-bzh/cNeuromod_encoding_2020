@@ -22,11 +22,12 @@ class SoundNetEncoding_conv(nn.Module):
         self.layers_features = {}
         self.power_transform = power_transform
 
-        if pytorch_param_path is not None:
-            print("Loading SoundNet weights...")
-            # load pretrained weights of original soundnet model
-            self.soundnet.load_state_dict(torch.load(pytorch_param_path))
-        
+        if not no_init : 
+            if pytorch_param_path is not None:
+                print("Loading SoundNet weights...")
+                # load pretrained weights of original soundnet model
+                self.soundnet.load_state_dict(torch.load(pytorch_param_path))
+
         self.encoding_fmri = nn.Conv1d(self.soundnet.layers_size[output_layer],self.out_size,
                                         kernel_size=(kernel_size,1), padding=(kernel_size-1,0))
         print('shape of encoding matrice from last encoding layer : {} X {}'.format(self.soundnet.layers_size[output_layer], self.out_size))
