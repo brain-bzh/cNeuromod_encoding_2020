@@ -69,7 +69,8 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     test_percent = training_hyperparameters['test_percent']
     val_percent = training_hyperparameters['val_percent']
     mseloss = training_hyperparameters['mseloss']
-    
+    no_training = training_hyperparameters['no_training']
+    no_init = training_hyperparameters['no_init']
     #training_options
     decoupled_weightDecay = training_hyperparameters['decoupled_weightDecay']
     power_transform = training_hyperparameters['power_transform']
@@ -123,7 +124,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
         ', finetune_start : ', finetune_start, ' power_transform : ', power_transform, ', weight_decay', weight_decay)
     net = encod.SoundNetEncoding_conv(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, 
                                     output_layer=output_layer, kernel_size=kernel_size, power_transform=power_transform, 
-                                    train_start= finetune_start, finetune_delay=finetune_delay)
+                                    train_start= finetune_start, finetune_delay=finetune_delay, no_init=no_init)
     if gpu : 
         net.to("cuda")
     else:
@@ -303,6 +304,8 @@ if __name__ == "__main__":
     parser.add_argument("--decoupledWD", dest='decoupledWD', action='store_true')
     parser.add_argument("--powerTransform", dest='powerTransform', action='store_true')
     parser.add_argument("--lrScheduler", dest='lrScheduler', action='store_true')
+    parser.add_argument("--noTraining", dest='noTraining', action='store_true')
+    parser.add_argument("--noInit", dest='noInit', action='store_true')
     # WIP : parser.add_argument("--trainPass", dest='trainPass', action='store_true')
 
     #ML_analysis
@@ -350,6 +353,8 @@ if __name__ == "__main__":
         'decoupled_weightDecay' : args.decoupledWD,
         'power_transform' : args.powerTransform,
         'lr_scheduler' : args.lrScheduler,
+        'no_training' : args.noTraining,
+        'no_init' : args.noInit
         # WIP : 'train_pass' : args.trainPass
     }
     th = training_hyperparameters
@@ -381,7 +386,7 @@ if __name__ == "__main__":
         if os.path.isdir(film_path):
             all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
 
-    resultpath = os.path.join(outpath, dt_string+"_step2")
+    resultpath = os.path.join(outpath, dt_string+"_HP_train_subs_4_&_6")
     resultpath = os.path.join(resultpath, 'sub-'+args.sub)
     os.makedirs(resultpath, exist_ok=True)
     

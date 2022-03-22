@@ -9,7 +9,7 @@ from models import soundnet_model as snd
 class SoundNetEncoding_conv(nn.Module):
     def __init__(self, out_size, output_layer, fmrihidden=1000, kernel_size = 1, 
                 train_start = None, finetune_delay=None, nroi_attention=None, power_transform=False, hrf_model=None, 
-                oversampling = 16, tr = 1.49, audiopad = 0, pytorch_param_path = None):
+                oversampling = 16, tr = 1.49, audiopad = 0, pytorch_param_path = None, no_init=False):
         super(SoundNetEncoding_conv, self).__init__()
 
         self.soundnet = snd.SoundNet8_pytorch()
