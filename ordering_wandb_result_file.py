@@ -7,8 +7,8 @@ import numpy as np
 
 selected_scale = 'auditory_Voxels' #'MIST_ROI' 
 #runs_df = load_df_from_wandb("gaimee/neuroencoding_audio")
+runs_df = pd.read_csv('/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/configs_from_HPtrain_2021', sep=';')
 
-runs_df = pd.read_csv('./configs_from_HPtrain_2021', sep=';')
 selected_df = runs_df[runs_df['scale'] == selected_scale]
 analysis_df = selected_df[selected_df['finetuneStart'].isnull()]
 sorted_df = analysis_df.sort_values(by=['val r2 max'], ascending=False)
@@ -43,8 +43,6 @@ for i, (idx, row) in enumerate(sorted_df.iterrows()):
                     for result_file in os.listdir(id_directory):
                         if result_file.find(outfile_name)>-1:
                             results_files.append(result_file)
-    
-    print(results_files)
     try:
         if delta[0] == '5':
             selected_file = os.path.join(id_directory, results_files[1])
@@ -52,15 +50,17 @@ for i, (idx, row) in enumerate(sorted_df.iterrows()):
             selected_file = os.path.join(id_directory, results_files[0])
         ordered_runs.append(selected_file)
         indexes.append([i, idx])
-    
     except IndexError : 
+        pass
         
-
-all_data = np.array([]).reshape(0,210)
-for datafile in ordered_runs : 
-    data = load(datafile, map_location=device('cpu'))
-    data = data['test_r2'].reshape(1,-1)
-    all_data = np.concatenate((all_data, data), axis=0)
+all_data = np.array([]).reshape(0,556)
+for i, datafile in enumerate(ordered_runs) : 
+    try:
+        data = load(datafile, map_location=device('cpu'))
+        data = data['test_r2'].reshape(1,-1)
+        all_data = np.concatenate((all_data, data), axis=0)
+    except EOFError :
+        print(datafile)
 
 indexes = np.array(indexes).reshape(-1,2)
 print(indexes.shape, all_data.shape)
