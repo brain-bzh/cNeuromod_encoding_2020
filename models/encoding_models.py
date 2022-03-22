@@ -256,3 +256,98 @@ class SoundNetEncoding_conv_3(nn.Module):
         return out
 
 #---END-WIP---------------------------------------------------------------
+
+#change start_finetuning in function of epoch n°
+
+# class MRIEncoding(nn.Module):
+#     def __init__(self, out_size, parent_network, param_path = None,
+#                 output_layer = "conv7", train_start = None, epoch_start=None, 
+#                 power_transform=False, nroi_attention=None, 
+#                 hrf_model=None, oversampling = 16, tr = 1.49, audiopad = 0):
+#         super(MRIEncoding, self).__init__()
+        
+#         self.soundnet = snd.SoundNet8_pytorch()
+#         self.fmrihidden = fmrihidden
+#         self.nroi = nroi
+
+#         # if preload:
+#         #     print("Loading SoundNet weights...")
+#         #     # load pretrained weights of original soundnet model
+#         #     self.soundnet.load_state_dict(torch.load(pytorch_param_path))
+#         #     print("Pretrained model loaded")
+#         #     if transfer:
+#         #         #freeze the parameters of soundNet
+#         #         print("Transfer learning - backbone is fixed")
+#         #         for param in self.soundnet.parameters():
+#         #             param.requires_grad = False
+#         #     else:
+#         #         print("Finetuning : backbone will be optimized")
+
+#         if pytorch_param_path is not None:
+#             print("Loading SoundNet weights...")
+#             # load pretrained weights of original soundnet model
+#             self.soundnet.load_state_dict(torch.load(pytorch_param_path))
+
+#         if nroi_attention is not None:
+#             self.maskattention = torch.nn.Parameter(torch.rand(out_size,nroi_attention))
+#         else:
+#             self.maskattention = None
+        
+#         if hrf_model is not None : 
+#             self.hrf_model = hrf_model
+#             self.oversampling = oversampling
+#             self.audiopad = audiopad
+#             self.tr = tr
+#         else :
+#             self.hrf_model=None
+
+#     # def encoding_layer(self):
+#     #     raise NotImplementedError("Subclass must implement abstract method")    
+
+#     def forward(self, x):
+#         warnings.filterwarnings("ignore")
+#         with torch.no_grad():
+#             emb = self.soundnet(x)
+
+#         out = self.encoding_fmri(emb)
+        
+#         return out
+
+#     def extract_feat(self,x:torch.Tensor)->dict:
+#         pass
+
+# class SoundNetEncoding_conv(MRIEncoding):
+#     def __init__(self, kernel_size = 1, ):
+#         super(SoundNetEncoding_conv, self).__init__()
+#         self.encoding_fmri = nn.Conv1d(self.soundnet.layers_size[output_layer],self.out_size, 
+#                                         kernel_size=(kernel_size,1), padding=(kernel_size-1,0))
+# #print('shape of encoding matrice from last encoding layer : {} X {}'.format(self.soundnet.layers_size[output_layer], self.out_size))
+
+# class SoundNetEncoding(MRIEncoding):
+#     def __init__(self, fmrihidden=1000):
+#         super(SoundNetEncoding, self).__init__()
+#         self.fmrihidden = fmrihidden
+#         self.encoding_fmri = nn.Sequential(                
+#                 nn.Linear(1024,self.fmrihidden),
+#                 nn.ReLU(inplace=True),
+#                 nn.Linear(self.fmrihidden,self.nroi))
+
+# class SoundNetEncoding_conv_2(MRIEncoding):
+#     def __init__(self, fmrihidden=1000, kernel_size = 1, ):
+#         super(SoundNetEncoding_conv_2, self).__init__()
+#         self.fmrihidden = fmrihidden
+#         self.encoding_fmri = nn.Sequential(                
+#                 nn.Conv2d(1024,self.fmrihidden,kernel_size=(1,1)),
+#                 nn.ReLU(inplace=True),
+#                 nn.Conv2d(self.fmrihidden,self.nroi,kernel_size=(1,1)))
+
+# class SoundNetEncoding_conv_3(MRIEncoding):
+#     def __init__(self, fmrihidden=1000, kernel_size = 1, ):
+#         super(SoundNetEncoding_conv_3, self).__init__()
+#         self.fmrihidden = fmrihidden
+#         self.encoding_fmri = nn.Sequential(                
+#                 nn.Conv2d(1024,2*self.fmrihidden,kernel_size=(1,1)),
+#                 nn.ReLU(inplace=True),
+#                 nn.Conv2d(2*self.fmrihidden,self.fmrihidden,kernel_size=(1,1)),
+#                 nn.ReLU(inplace=True),
+#                 nn.Conv2d(self.fmrihidden,self.nroi,kernel_size=(1,1)))
