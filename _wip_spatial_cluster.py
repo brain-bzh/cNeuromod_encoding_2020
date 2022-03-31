@@ -6,7 +6,7 @@ from nilearn import plotting
 from matplotlib import pyplot as plt 
 from scipy import corrcoef
 from scipy.cluster.hierarchy import dendrogram, linkage, cut_tree
-from visu_utils import ROI_map
+from visu_utils import ROI_map, parameter_mode_in_dataset
 
 import statistics
 
@@ -82,14 +82,7 @@ for cluster in range(nClusters):
     print('\nSize of cluster {} : {} configurations. \n'.format(cluster, cluster_df.shape[0]))
     hyperparameters = ['bs', 'lr', 'ks', 'wd', 'patience', 'delta']
     for hp in hyperparameters:
-        a = cluster_hp_df[hp].value_counts(normalize=True)
-        print(a)
-        try : 
-            best_hp = statistics.mode(cluster_hp_df[hp])
-            print('dominant value of {} in cluster {} : {}'.format(hp, cluster, best_hp))
-
-        except statistics.StatisticsError:
-            print('no dominant value was found for {} in cluster {}'.format(hp, cluster))
+        parameter_mode_in_dataset(cluster_hp_df, hp, 'cluster {}'.format(cluster))
 
 #-------------------------------visu-cluster-------------------------------------------
 # for cluster in range(nClusters):
