@@ -34,7 +34,8 @@ def extract_value_from_string(string, start_index, stop_condition=(lambda x: Fal
     return target_value
 
 def result_name(dataset, scale, model, batchsize, kernel_size, patience_es, delta_es, learning_rate, weigth_decay, 
-                            decoupled_wd, lr_scheduler, power_transform, finetune_start, wandb_id, year = 2022):
+                            decoupled_wd, lr_scheduler, power_transform, finetune_start, wandb_id, no_training, no_init, 
+                            year = 2022):
     
     outfile_name = '{}_{}_{}_'.format(dataset, scale, model)
     outfile_name +='{:03}{:02}{:02}'.format(batchsize, kernel_size, patience_es)
@@ -46,9 +47,11 @@ def result_name(dataset, scale, model, batchsize, kernel_size, patience_es, delt
     outfile_name = outfile_name+'1' if decoupled_wd else outfile_name+'0'
     outfile_name = outfile_name+'1' if lr_scheduler else outfile_name+'0'
     outfile_name = outfile_name+'1' if power_transform else outfile_name+'0'
+    outfile_name = outfile_name+'_NoTrain' if no_training else outfile_name
+    outfile_name = outfile_name+'_NoInit' if no_init else outfile_name
     if finetune_start != None or not isnull(finetune_start) : 
         outfile_name = outfile_name+'_f_'+finetune_start
-    outfile_name = '_wbid'+format(wandb_id)
+    outfile_name += '_wbid'+format(wandb_id)
     return outfile_name
 
 def fetchMRI(videofile,fmrilist):

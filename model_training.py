@@ -85,7 +85,7 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     date_start = datetime.now()
     dt_string_start = date_start.strftime("_%Y%m%d-%H%M%S")
     outfile_name = fu.result_name (data_selection['dataset'], scale, model.__name__, batchsize, kernel_size, patience_es,
-    delta_es, lr, weight_decay, decoupled_weightDecay, lr_scheduler, power_transform, finetune_start, wb_id)
+    delta_es, lr, weight_decay, decoupled_weightDecay, lr_scheduler, power_transform, finetune_start, wb_id, no_training, no_init)
     destdir = outpath
     #define wandb.init.name or id ? with dt_string_start ?
 
@@ -389,7 +389,7 @@ if __name__ == "__main__":
         if os.path.isdir(film_path):
             all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
 
-    resultpath = os.path.join(outpath, dt_string+"_HP_train_subs_4_&_6")
+    resultpath = os.path.join(outpath, dt_string+"_finetune_subs4&6")
     resultpath = os.path.join(resultpath, 'sub-'+args.sub)
     os.makedirs(resultpath, exist_ok=True)
     
