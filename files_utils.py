@@ -48,7 +48,7 @@ def result_name(dataset, scale, model, batchsize, kernel_size, patience_es, delt
     outfile_name = outfile_name+'1' if power_transform else outfile_name+'0'
     if finetune_start != None or not isnull(finetune_start) : 
         outfile_name = outfile_name+'_f_'+finetune_start
-    outfile_name = '_wbid'+format(wandb_id)
+    outfile_name += '_wbid'+format(wandb_id)
     return outfile_name
 
 def fetchMRI(videofile,fmrilist):
