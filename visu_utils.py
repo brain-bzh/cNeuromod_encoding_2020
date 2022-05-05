@@ -24,11 +24,12 @@ def voxels_map(data, title, out_directory, threshold):
     mymasker = input_data.NiftiMasker(mask_img=mask,standardize=False,detrend=False,t_r=tr,smoothing_fwhm=8)
     mymasker.fit()
     r2_stat = mymasker.inverse_transform(data.reshape(1,-1))
+    r2_stat.to_filename(os.path.join(out_directory, title))
     brain_3D_map(r2_stat, title=title, hemisphere='right', threshold=0.05, output_file=os.path.join(out_directory, title+'.png'))
-    f = plt.figure()
-    plotting.plot_stat_map(r2_stat, threshold = threshold, title=title, figure=f, colorbar=True, vmax=0.42)
-    f.savefig(os.path.join(out_directory, title+'.png'))
-    plt.close()
+    # f = plt.figure()
+    # plotting.plot_stat_map(r2_stat, threshold = threshold, title=title, figure=f, colorbar=True, vmax=0.42)
+    # f.savefig(os.path.join(out_directory, title+'.png'))
+    # plt.close()
 
 def ROI_map(data, title, out_directory, threshold, display_mode='z'):
     #data = load(data, map_location=device('cpu'))

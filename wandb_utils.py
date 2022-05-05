@@ -43,18 +43,18 @@ def order_results_files_from_wandb(results_path, wandb_path, subject, scale, pro
 
 if __name__ == "__main__":
     # Project is specified by <entity/project-name>
-    project = "gaimee/neuroencoding_audio"
-    outpath = '.' #'/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/'
-    df_save = os.path.join(outpath, 'allruns')
+    # project = "gaimee/neuroencoding_audio"
+    # outpath = '.' #'/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/'
+    # df_save = os.path.join(outpath, 'allruns')
 
     #runs_df = load_df_from_wandb(project)
     #runs_df.to_csv(df_save, sep=';')
-    runs_df = pd.read_csv('./allruns', sep=';')
+    runs_df = pd.read_csv('./subs_2346', sep=';')
     
-    subs = [4, 6]
-    scales = ['MIST_ROI'] #'auditory_Voxels']
-    lrs = [1e-3, 1e-4, 1e-5]
-    kss = [4,5,6]
+    subs = [2] #4, 6]
+    scales = ['MIST_ROI', 'auditory_Voxels']
+    lrs = [1e-4, 1e-5, 1e-6]
+    kss = [5,6,7]
     bss = [60,70,80]
     configs = []
     for lr in lrs:
@@ -62,14 +62,15 @@ if __name__ == "__main__":
             for bs in bss:
                 configs.append((lr, ks, bs))
 
-    for sub, (best_lr, best_ks, best_bs) in zip(subs, [(1e-05, 6, 80), (1e-05, 6, 70)]):
+    for sub, (best_lr, best_ks, best_bs) in zip(subs, [(1e-05,7,80),(1e-05, 6, 80), (1e-05, 6, 70)]):
+    #for sub in subs : 
         for scale in scales:
             print(sub, scale)
             sub_df = runs_df[runs_df['sub'] == sub]
             analysis_df = sub_df[sub_df['scale'] == scale]
             sorted_df_1 = analysis_df.sort_values(by=['val r2 max'], ascending=False)
-            # for hp in ['lr', 'ks', 'bs']:
-                # parameter_mode_in_dataset(sorted_df_1.head(20), hp, 'individual runs')
+            for hp in ['lr', 'ks', 'bs']:
+                parameter_mode_in_dataset(sorted_df_1.head(20), hp, 'individual runs')
 
 
             moy = []
@@ -80,8 +81,8 @@ if __name__ == "__main__":
             mean_df = pd.DataFrame(moy)
             
             sorted_df_2 = mean_df.sort_values(by=['val r2 max'], ascending=False)
-            # for hp in ['lr', 'ks', 'bs']:
-                # parameter_mode_in_dataset(sorted_df_1.head(10), hp, 'grouped runs (mean) by configs')
+            for hp in ['lr', 'ks', 'bs']:
+                parameter_mode_in_dataset(sorted_df_1.head(10), hp, 'grouped runs (mean) by configs')
             
             best_configs = analysis_df[(analysis_df['lr'] == best_lr) & (analysis_df['ks'] == best_ks) & (analysis_df['bs'] == best_bs)]
             best_mean = best_configs.mean()

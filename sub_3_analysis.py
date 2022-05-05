@@ -1,20 +1,22 @@
 import os
+from datetime import datetime
 import pandas as pd
 import numpy as np
 from torch import load, device
 from wandb_utils import load_df_from_wandb
 from visu_utils import ROI_map, voxels_map
 
-# project = "gaimee/neuroencoding_audio"
-# outpath = '.' #'/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/'
-# df_save = os.path.join(outpath, 'all')
+data_path = '/media/maelle/Backup Plus/thèse/Results/'
+result_path = '/home/maelle/Results'
+outpath = '.' #'/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/'
 
+# project = "gaimee/neuroencoding_audio"
+# df_save = os.path.join(outpath, 'subs_2346_comp')
 # runs_df = load_df_from_wandb(project)
 # runs_df.to_csv(df_save, sep=';')
-runs_df = pd.read_csv('./all', sep=';')
+# print(runs_df.shape)
+runs_df = pd.read_csv('./subs_2346_comp', sep=';')
 
-result_path = '/home/maelle/Results'
-#runs_df = pd.read_csv('./allruns', sep=';')
 
 # #best_roi
 # df = roi_df
@@ -28,17 +30,25 @@ result_path = '/home/maelle/Results'
 # delta_bool = df['delta'] == delta
 # patience_bool = df['patience'] == patience
 
-for sub, (lr, ks, bs) in zip([4, 6], [(1e-05, 6, 80),(1e-05, 6, 70)]):
+for sub, (lr, ks, bs) in zip([2, 3, 4, 6], [(1e-05, 7, 80), (1e-04, 5, 70), (1e-05, 6, 80),(1e-05, 6, 70)]):
     sub_df = runs_df[runs_df['sub']==sub]
     bs_bool = sub_df['bs'] == bs
     lr_bool = sub_df['lr'] == lr
     ks_bool = sub_df['ks'] == ks
+    if sub == 3 :
+        wd_bool = sub_df['wd'] == 1e-3
+        delta_bool = sub_df['delta'] == 0
+        patience_bool = sub_df['patience'] == 15
+        timestamp_bool = pd.to_datetime(sub_df['_timestamp'],  unit="s") >= '2022-03-29'
+        sub_df = sub_df[timestamp_bool]
+
     roi_df = sub_df[(sub_df['scale']=='MIST_ROI')& bs_bool & lr_bool & ks_bool]
     vox_df = sub_df[(sub_df['scale']=='auditory_Voxels') & bs_bool & lr_bool & ks_bool]
+
     print(runs_df.shape, sub_df.shape, roi_df.shape, vox_df.shape)
     for i, df in enumerate([roi_df, vox_df]):
         layer_r2 = {'none':[], 'conv7':[], 'conv6':[], 'conv5':[], 'conv4':[]}
-        for path, dirs, files in os.walk(result_path):
+        for path, dirs, files in os.walk(data_path):
             for f in files:
                 if f.find('_wbid') > -1:
                     start_id = f.find('_wbid')+len('_wbid')
@@ -52,16 +62,18 @@ for sub, (lr, ks, bs) in zip([4, 6], [(1e-05, 6, 80),(1e-05, 6, 70)]):
                             layer_r2['none'].append(data['test_r2'])
                         else : 
                             layer_r2[layer_serie.item()].append(data['test_r2'])                
+        print(sub, layer_r2)
         for layer, data in layer_r2.items():
             arr= np.array(data).reshape(len(data), -1)
             moy_arr = np.mean(arr, axis=0)
             if i == 0:
                 rtitle = 'sub0{}_finetune_{}_roi_r2_map'.format(sub, layer)
                 ROI_map(moy_arr, rtitle, result_path, threshold=0.05)
+# 
             elif i == 1:
                 vtitle = 'sub0{}_finetune_{}_auditory_voxels_r2_map'.format(sub, layer)
                 voxels_map(moy_arr, vtitle, result_path, threshold=0.05)
-
+# 
 
 
 
