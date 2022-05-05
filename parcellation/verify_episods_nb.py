@@ -5,7 +5,7 @@ with open("./parcellation/episodes_list", "r") as dy_sub:
 
 episodes_list = [episode[:episode.find('\n')] if episode.find('\n') > -1 else episode for episode in episodes_list]
 
-path = "/home/maellef/DataBase/fMRI_Embeddings_fmriprep-20.2lts/auditory_Voxels/friends/"
+path = "/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_Embeddings_fmriprep-2022/auditory_Voxels/friends/"
 
 for sub in os.listdir(path):
     sub_path = os.path.join(path, sub)

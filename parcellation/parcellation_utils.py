@@ -16,17 +16,19 @@ from nilearn.connectome import ConnectivityMeasure
 
 
 # basepath = '/~/nfarrugi/git/neuromod/cneuromod/movie10/derivatives/fmriprep1.5.0/fmriprep'
-cNeuromod_path = '/home/maellef/projects/rrg-pbellec/datasets/cneuromod_new/'
-mistroicsv = '/home/maellef/projects/rrg-pbellec/maellef/data/DataBase/fMRI_parcellations/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
-mistroi_labelsimg = '/home/maellef/projects/rrg-pbellec/maellef/data/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
-auditory_mask = '/home/maellef/git_dir/cNeuromod_encoding_2020/parcellation/STG_middle.nii.gz'
-embedding_path = '/home/maellef/projects/rrg-pbellec/maellef/data/DataBase/fMRI_Embeddings_fmriprep-20.2lts/'
+space = 'MNI152NL'
+desc = 'preproc_bold.nii.gz'
+cNeuromod_path = '/home/maellef/projects/rrg-pbellec/rrg-pbellec/datasets/cneuromod_processed/fmriprep'
+mistroicsv = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_parcellations/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
+mistroi_labelsimg = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
+auditory_mask = '/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/parcellation/STG_middle.nii.gz'
+embedding_path = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_Embeddings_fmriprep-2022/'
 os.makedirs(embedding_path,exist_ok=True)
 
 def parcellate_auditory(filepath_fmri, auditorymask, subject, dataset, save=True,savepath='./results'):
     savepath = os.path.join(savepath, 'auditory_Voxels', dataset, subject)
     ## From the filepath_fmri, deduce the maskpath and the tsvfile 
-    tsvfile_fmri = filepath_fmri[:-50] + 'desc-confounds_regressors.tsv'
+    tsvfile_fmri = filepath_fmri[:-50] + 'desc-confounds_timeseries.tsv'
     idstart = filepath_fmri.find('/func/')
     idend = filepath_fmri.find('_space')
     filebase = filepath_fmri[idstart+6:idend]
@@ -54,8 +56,11 @@ def parcellate_auditory(filepath_fmri, auditorymask, subject, dataset, save=True
 def parcellate_MIST(filepath_fmri, subject, dataset, labels_img=mistroi_labelsimg,save=True,savepath='./results'):
     savepath = os.path.join(savepath, 'MIST_ROI', dataset, subject)
     ## From the filepath_fmri, deduce the maskpath and the tsvfile 
+    print(filepath_fmri)
     maskpath_fmri = filepath_fmri[:-19]+'brain_mask.nii.gz'
-    tsvfile_fmri = filepath_fmri[:-50] + 'desc-confounds_regressors.tsv'
+    print(maskpath_fmri)
+    tsvfile_fmri = filepath_fmri[:-50] + 'desc-confounds_timeseries.tsv'
+    print(tsvfile_fmri)
     idstart = filepath_fmri.find('/func/')
     idend = filepath_fmri.find('_space')
     filebase = filepath_fmri[idstart+6:idend]
@@ -88,14 +93,18 @@ if __name__ == "__main__":
     args = parser.parse_args()
     subject = "sub-"+args.subject
     dataset = args.dataset
-    mri_path = os.path.join(cNeuromod_path, dataset+'/derivatives/fmriprep-20.2lts/fmriprep/')
+    #mri_path = os.path.join(cNeuromod_path, dataset+'/derivatives/fmriprep-20.2lts/fmriprep/')
+    if dataset == 'movie10' : 
+        mri_path = os.path.join(cNeuromod_path, dataset)
+    elif dataset == 'friends' : 
+        mri_path = '/lustre03/project/rrg-pbellec/maellef/finefriends/data/friends.fmriprepcd/'
     subjectdir = os.path.join(mri_path, subject)
 
     for s in os.listdir(subjectdir):
         if s.find('ses')>-1:
             sesspath = os.path.join(subjectdir, s, 'func')
             for curfile in os.listdir(sesspath):               
-                if curfile.find('preproc_bold.nii.gz')>-1 and curfile.find('2009')>-1:
+                if curfile.find(desc)>-1 and curfile.find(space)>-1:
                     filepath = os.path.join(sesspath, curfile)
                     print('Parcellating file ' + filepath)
                     parcellate_MIST(filepath,save=True,savepath=embedding_path, subject=subject, dataset=dataset)

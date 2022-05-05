@@ -389,7 +389,7 @@ if __name__ == "__main__":
         if os.path.isdir(film_path):
             all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
 
-    resultpath = os.path.join(outpath, dt_string+"_finetune_subs4&6")
+    resultpath = os.path.join(outpath, dt_string+"_HPtraining_sub2")
     resultpath = os.path.join(resultpath, 'sub-'+args.sub)
     os.makedirs(resultpath, exist_ok=True)
     
