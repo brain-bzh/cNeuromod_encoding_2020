@@ -5,6 +5,7 @@ from audio_utils import load_audio_by_bit
 import librosa
 from torch.utils.data import IterableDataset
 import torch
+import panns_inference
 
 def create_train_eval_dataset(train_input, eval_input, train_percent, val_percent, test_percent):
 
@@ -109,3 +110,29 @@ def create_usable_audiofmri_datasets(data, tr, sr, name='data'):
         y[i] = seg_fmri[:min_len]
     
     return(x,y)
+
+def create_usable_audio_datasets(data, tr, sr, name='data',device='cpu'):
+    print("getting audio files and associated predictions for {}...".format(name))
+    x = []## contains audio
+    y = []## contains logits predictions for audioset classes
+
+    ## Instantiate the audio tagging model 
+    ## Sample rate of the default CNN14 for panns_inference
+    cnn14_sr = 32000
+    tagging = panns_inference.AudioTagging(checkpoint_path=None,device=device)
+
+    for (audio_path, _) in data :
+        length = librosa.get_duration(filename = audio_path)
+        audio_segment = load_audio_by_bit(audio_path, 0, length, bitSize = tr, sr = sr)
+        audio_segment_fortagging = load_audio_by_bit(audio_path, 0, length, bitSize = tr, sr = cnn14_sr)
+        x.append(audio_segment)
+        y.append(audio_segment_fortagging)
+
+    # Stack all the audios for tagging in order to process in batch 
+    y = np.stack(y)
+
+    ## Batch inference of probabilities 
+    probs,embeddings = tagging.inference(y)
+    print("done.")
+
+    return x,probs,embeddings
