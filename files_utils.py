@@ -91,6 +91,13 @@ def associate_stimuli_with_Parcellation(stimuli_path, path_parcellation):
         pair_wav_mri.extend(fetchMRI(wav, parcellation_list))
     return pair_wav_mri
 
+def associate_stimuli_with_nothing(stimuli_path, path_parcellation):### same format than function associate_stimuli_with_Parcellation, to be consistent between training functions
+    stimuli_wav = [os.path.join(stimuli_path, seg) for seg in sorted(os.listdir(stimuli_path)) if seg[-4:] == '.wav']    
+    wavlist = []
+    for wav in stimuli_wav:
+        wavlist.extend([(wav, '')])
+    return wavlist    
+
 def cNeuromod_subject_convention(path, name, zero_index = True):
     num = int(name[-1])
     if zero_index : 
