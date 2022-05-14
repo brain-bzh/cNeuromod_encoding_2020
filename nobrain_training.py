@@ -6,7 +6,7 @@ from datetime import datetime
 import files_utils as fu
 #Create Dataset
 from torch.utils.data import DataLoader
-from Datasets_utils import SequentialDataset, create_usable_audiofmri_datasets, create_train_eval_dataset
+from Datasets_utils import SequentialDataset, create_usable_audio_datasets, create_train_eval_dataset
 #Models
 from models import encoding_models as encod
 #Train & Test
@@ -14,14 +14,13 @@ from tqdm import tqdm
 from torch import nn, optim, save, load
 from train_utils import train, test, test_r2, EarlyStopping 
 
-soundNet_params_path = '/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
-scratch_path = '/home/maellef/scratch'
+soundNet_params_path = '/home/nfarrugi/git/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
+scratch_path = '/home/nfarrugi/data/scratch'
 
-def model_training(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis):
+def model_training_nobrain(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis):
 
     #data selection
     all_subs_files = data_selection['all_data']
-    subject = data_selection['subject']
     train_data = []
     for subdata in data_selection['train_data']:
         train_data.extend(all_subs_files[subdata]) 
@@ -38,10 +37,9 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     selected_inputs =data_processing['selected_inputs']
     if selected_inputs != None : 
         nInputs = len(selected_inputs)
-    elif scale == 'MIST_ROI':
-        nInputs = 210
-    elif scale == 'auditory_Voxels':
-        nInputs = 556
+    else:
+        ### Number of inputs is the number of audioset classes
+        nInputs = 527
 
     #training_parameters
     model = training_hyperparameters['model']
@@ -67,7 +65,10 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
     power_transform = training_hyperparameters['power_transform']
     lr_scheduler = training_hyperparameters['lr_scheduler']
     gpu = training_hyperparameters['gpu']
-    wb_id = wandb.run.id
+    if ml_analysis == 'wandb':
+        wb_id = wandb.run.id
+    else:
+        wb_id=0
     #WIP_conditions :
     #train_pass = training_hyperparameters['train_pass']
     #warm_restart = training_hyperparameters['warm_restart']
@@ -95,17 +96,25 @@ def model_training(outpath, data_selection, data_processing, training_hyperparam
 
     DataTrain, DataVal, DataTest = create_train_eval_dataset(train_input, eval_input, train_percent, val_percent, test_percent)
 
-    xTrain, yTrain = create_usable_audiofmri_datasets(DataTrain, tr, sr, name='training')
-    TrainDataset = SequentialDataset(xTrain, yTrain, batch_size=batchsize, selection=selected_inputs)
-    trainloader = DataLoader(TrainDataset, batch_size=None)
+    npdatasetpath = os.path.join(scratch_path,'np_datasets')
+    print("Creation of Datasets, can be very long....")
 
-    xVal, yVal = create_usable_audiofmri_datasets(DataVal, tr, sr, name='validation')
+    print("Validation....")    
+    xVal, yVal,embVal = create_usable_audio_datasets(DataVal, tr, sr, name='validation',npdatasetpath=npdatasetpath)
+
     ValDataset = SequentialDataset(xVal, yVal, batch_size=batchsize, selection=selected_inputs)
     valloader = DataLoader(ValDataset, batch_size=None)
 
-    xTest, yTest = create_usable_audiofmri_datasets(DataTest, tr, sr, name='test')
+    print("Test....")
+    xTest, yTest,embTest = create_usable_audio_datasets(DataTest, tr, sr,npdatasetpath=npdatasetpath,name='test')
     TestDataset = SequentialDataset(xTest, yTest, batch_size=batchsize, selection=selected_inputs)
     testloader = DataLoader(TestDataset, batch_size=None)
+    print("Training....")
+    xTrain, yTrain,embTrain = create_usable_audio_datasets(DataTrain, tr, sr, npdatasetpath=npdatasetpath,name='training')
+    TrainDataset = SequentialDataset(xTrain, yTrain, batch_size=batchsize, selection=selected_inputs)
+    trainloader = DataLoader(TrainDataset, batch_size=None)
+
+    
 
     print(f'size of train, val and set : ', len(TrainDataset), len(ValDataset), len(TestDataset))
 
@@ -262,7 +271,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     #data_selection
-    parser.add_argument("-s", "--sub", type=str)
     parser.add_argument("-d", "--dataset", type=str)
     parser.add_argument("--sessionsTrain", type=int, default=1) # WIP, must be >=1, add a condition to check the entry
     parser.add_argument("--sessionsEval", type=int, default=1) # WIP, must be >=1, add a condition to check the entry
@@ -308,8 +316,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    data_selection = {
-        'subject' : int(args.sub),
+    data_selection = {        
         'dataset' : args.dataset,
         'train_data' : args.trainData,
         'eval_data' : args.evalData,
@@ -367,25 +374,28 @@ if __name__ == "__main__":
         experiment = comet_ml.Experiment("1NT8FqmXsAH088rHLBYC1Yyev")
         ml_analysis += 'comet'
 
-    outpath = '/home/maellef/scratch/Results/' #"/home/maelle/Results/"
-    stimuli_path = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/stimuli' #'/home/maelle/DataBase/stimuli'
+    outpath = os.path.join(scratch_path,'Results/') #"/home/maelle/Results/"
+    stimuli_path = '/home/nfarrugi/data/neuromod_stimuli/stimuli' #'/home/maelle/DataBase/stimuli'
+
+    ## Even if we will not load the fmri data, we need the path to be able to use the same loading functions than in the brain training 
     embed_path = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_Embeddings_fmriprep-20.2lts' #'/home/maelle/DataBase/fMRI_Embeddings'
     
     dataset_path = os.path.join(stimuli_path, ds['dataset'])
-    parcellation_path = os.path.join(embed_path, dp['scale'], ds['dataset'], 'sub-'+args.sub)
+    parcellation_path = os.path.join(embed_path, dp['scale'], ds['dataset'], 'sub-ai')
 
     all_subs_files = dict()
     for film in os.listdir(dataset_path):
         film_path = os.path.join(dataset_path, film)
         if os.path.isdir(film_path):
-            all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
+            all_subs_files[film] = fu.associate_stimuli_with_nothing(film_path, parcellation_path)
 
     resultpath = os.path.join(outpath, dt_string+"_HPtraining_sub2")
-    resultpath = os.path.join(resultpath, 'sub-'+args.sub)
+    resultpath = os.path.join(resultpath, 'sub-ai')
     os.makedirs(resultpath, exist_ok=True)
     
     ds['all_data']=all_subs_files
-    model_training(resultpath, ds, dp, th, ml_analysis)
+    print("Entering main training function")
+    model_training_nobrain(resultpath, ds, dp, th, ml_analysis)
 
     if args.wandb :
         wandb.finish()
