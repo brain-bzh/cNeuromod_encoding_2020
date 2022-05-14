@@ -119,8 +119,8 @@ def create_usable_audio_datasets(data, tr, sr, npdatasetpath,name='data',device=
     if os.path.isfile(os.path.join(npdatasetpath,f'{name}.npz')):
         print("Dataset found, loading")
         x = np.load(os.path.join(npdatasetpath,f'{name}.npz'),allow_pickle=True)['x']
-        probs = np.load(os.path.join(npdatasetpath,f'{name}.npz'))['probs']
-        embeddings = np.load(os.path.join(npdatasetpath,f'{name}.npz'))['embeddings']
+        probs = np.load(os.path.join(npdatasetpath,f'{name}.npz'),allow_pickle=True)['probs']
+        embeddings = np.load(os.path.join(npdatasetpath,f'{name}.npz'),allow_pickle=True)['embeddings']
     else:
             
         print("getting audio files and associated predictions for {}...".format(name))
@@ -133,20 +133,15 @@ def create_usable_audio_datasets(data, tr, sr, npdatasetpath,name='data',device=
         tagging = panns_inference.AudioTagging(checkpoint_path=None,device=device)
 
         for (audio_path, _) in tqdm(data):
-            length = librosa.get_duration(filename = audio_path)/50
+            length = librosa.get_duration(filename = audio_path)
             audio_segment = load_audio_by_bit(audio_path, 0, length, bitSize = tr, sr = sr)
             audio_segment_fortagging = load_audio_by_bit(audio_path, 0, length, bitSize = tr, sr = cnn14_sr)
             x.append(audio_segment)
-            y.append(np.stack(audio_segment_fortagging))        
-
-        # Stack all the audios for tagging in order to process in batch 
-        y = np.vstack(y)
-
-        print(y.shape)
+            y.append(audio_segment_fortagging)
 
         print("Inference with CNN14...")
-        ## Batch inference of probabilities 
-        probs,embeddings = tagging.inference(y)
+        ## Batch inference of probabilities
+        probs,embeddings = [tagging.inference(np.stack(y_bit))[0] for y_bit in y],[tagging.inference(np.stack(y_bit))[1] for y_bit in y]
         print("done.")
 
         os.makedirs(npdatasetpath,exist_ok=True)

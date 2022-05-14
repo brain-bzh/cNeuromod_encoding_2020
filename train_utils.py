@@ -61,26 +61,26 @@ def train(trainloader,net,optimizer, epoch, mseloss,delta=1e-2, gpu=True):
         #print(f'   batch size (x.shape[0]) : ', batch_size)
 
         # for 1D output
-        #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)
-        x =  torch.Tensor(x).view(1,1,-1, 1)          #we need to adapt the shape of the batch so it can fit into pytorch convolutions layers
+        #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)        
+        x =  torch.Tensor(x).view(batch_size,1,-1, 1)          #we need to adapt the shape of the batch so it can fit into pytorch convolutions layers
         #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)
         if gpu : 
             x = x.cuda()                                           #then we put the tensor into the memory of the graphic card, so computations can be done faster
-
         # Forward pass
         predicted_y = net(x, epoch)
-        predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()# as some dimensions in the output 
+        #print(f"y_real shape : ", y.shape, "and y_predicted shape : ", predicted_y.shape)         # both must have the same shape
+        #predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()# as some dimensions in the output 
         #print(f'   len(predicted_y) : ', len(predicted_y))        
         
-        predicted_y = predicted_y[:batch_size]                #FOR AUDIO ONLY : Cropping the end of the predicted fmri to match the measured bold
+        #predicted_y = predicted_y[:batch_size]                #FOR AUDIO ONLY : Cropping the end of the predicted fmri to match the measured bold
         #print(f'predicted_y after squeezing and cutting to the same size as fmri data: ', predicting_y)
         #print(f'   len(predicted_y) after crop: ', len(predicted_y))
         
-        y = y.double()
+        #y = y.double()
         #print(f'   len(real_y): ', len(y))
         if gpu:
             y = y.cuda()
-        #print(f"y_real shape : ", y.shape, "and y_predicted shape : ", predicted_y.shape)         # both must have the same shape
+        
         loss=delta*mseloss(predicted_y,y)/batch_size
         loss.backward()
         optimizer.step()
@@ -142,18 +142,25 @@ def test(trainloader,net,optimizer, epoch ,mseloss,delta=1e-2, gpu=True):
             optimizer.zero_grad()
             batch_size = x.shape[0]
 
-            # for 1D output 
-            x =  torch.Tensor(x).view(1,1,-1, 1) 
-            if gpu:
-                x = x.cuda()  
+            x =  torch.Tensor(x).view(batch_size,1,-1, 1)          #we need to adapt the shape of the batch so it can fit into pytorch convolutions layers
+            #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)
+            if gpu : 
+                x = x.cuda()                                           #then we put the tensor into the memory of the graphic card, so computations can be done faster
             # Forward pass
             predicted_y = net(x, epoch)
-            predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()
-            predicted_y = predicted_y[:batch_size]
-            y = y.double()
+            #print(f"y_real shape : ", y.shape, "and y_predicted shape : ", predicted_y.shape)         # both must have the same shape
+            #predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()# as some dimensions in the output 
+            #print(f'   len(predicted_y) : ', len(predicted_y))        
+            
+            #predicted_y = predicted_y[:batch_size]                #FOR AUDIO ONLY : Cropping the end of the predicted fmri to match the measured bold
+            #print(f'predicted_y after squeezing and cutting to the same size as fmri data: ', predicting_y)
+            #print(f'   len(predicted_y) after crop: ', len(predicted_y))
+            
+            #y = y.double()
+            #print(f'   len(real_y): ', len(y))
             if gpu:
                 y = y.cuda()
-
+        
             loss=delta*mseloss(predicted_y,y)/batch_size
 
             all_y.append(y.cpu().numpy().reshape(batch_size,-1))
@@ -175,7 +182,8 @@ def test_r2(testloader,net, epoch, mseloss, gpu=True):
             bsize = wav.shape[0]
             
             # load data
-            wav = torch.Tensor(wav).view(1,1,-1,1)
+            
+            wav = torch.Tensor(wav).view(bsize,1,-1,1)
             if gpu:
                 wav = wav.cuda()
 
@@ -184,10 +192,7 @@ def test_r2(testloader,net, epoch, mseloss, gpu=True):
                 fmri=fmri.cuda()
 
             # Forward pass
-            fmri_p = net(wav, epoch).permute(2,1,0,3).squeeze()
-
-            #Cropping the end of the predicted fmri to match the measured bold
-            fmri_p = fmri_p[:bsize]
+            fmri_p = net(wav, epoch)            
             
             all_fmri.append(fmri.cpu().numpy().reshape(bsize,-1))
             all_fmri_p.append(fmri_p.cpu().numpy().reshape(bsize,-1))

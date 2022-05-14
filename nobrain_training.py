@@ -1,5 +1,6 @@
 #Generic
 import os, argparse
+from tkinter import Y
 import numpy as np
 from datetime import datetime
 #Get input & preprocess
@@ -37,9 +38,8 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
     selected_inputs =data_processing['selected_inputs']
     if selected_inputs != None : 
         nInputs = len(selected_inputs)
-    else:
-        ### Number of inputs is the number of audioset classes
-        nInputs = 527
+    else:        
+        nInputs = 2048
 
     #training_parameters
     model = training_hyperparameters['model']
@@ -101,17 +101,17 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
 
     print("Validation....")    
     xVal, yVal,embVal = create_usable_audio_datasets(DataVal, tr, sr, name='validation',npdatasetpath=npdatasetpath)
-
-    ValDataset = SequentialDataset(xVal, yVal, batch_size=batchsize, selection=selected_inputs)
+    print(len(xVal),len(yVal))
+    ValDataset = SequentialDataset(xVal, embVal, batch_size=batchsize, selection=selected_inputs)
     valloader = DataLoader(ValDataset, batch_size=None)
 
     print("Test....")
     xTest, yTest,embTest = create_usable_audio_datasets(DataTest, tr, sr,npdatasetpath=npdatasetpath,name='test')
-    TestDataset = SequentialDataset(xTest, yTest, batch_size=batchsize, selection=selected_inputs)
+    TestDataset = SequentialDataset(xTest, embTest, batch_size=batchsize, selection=selected_inputs)
     testloader = DataLoader(TestDataset, batch_size=None)
     print("Training....")
     xTrain, yTrain,embTrain = create_usable_audio_datasets(DataTrain, tr, sr, npdatasetpath=npdatasetpath,name='training')
-    TrainDataset = SequentialDataset(xTrain, yTrain, batch_size=batchsize, selection=selected_inputs)
+    TrainDataset = SequentialDataset(xTrain, embTrain, batch_size=batchsize, selection=selected_inputs)
     trainloader = DataLoader(TrainDataset, batch_size=None)
 
     
@@ -122,10 +122,10 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
     ### Model Setup
     print(f'nInputs : ', nInputs, ', kernel size : ', kernel_size, ', output_layer : ', output_layer, 
         ', finetune_start : ', finetune_start, ' power_transform : ', power_transform, ', weight_decay', weight_decay)
-    net = encod.SoundNetEncoding_conv(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, 
+    net = encod.SoundNetFineTune(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, 
                                     output_layer=output_layer, kernel_size=kernel_size, power_transform=power_transform, 
                                     train_start= finetune_start, finetune_delay=finetune_delay, no_init=no_init)
-    if gpu : 
+    if gpu: 
         net.to("cuda")
     else:
         net.to("cpu")
