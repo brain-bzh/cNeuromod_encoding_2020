@@ -162,7 +162,8 @@ def create_usable_audio_datasets(data, tr, sr, npdatasetpath,name='data',device=
             
         print("getting audio files and associated predictions for {}...".format(name))
         x = []## contains audio
-        y = []## contains logits predictions for audioset classes
+        probs =[]
+        embeddings =[]
 
         ## Instantiate the audio tagging model 
         ## Sample rate of the default CNN14 for panns_inference
@@ -171,14 +172,12 @@ def create_usable_audio_datasets(data, tr, sr, npdatasetpath,name='data',device=
 
         for (audio_path, _) in tqdm(data):
             length = librosa.get_duration(filename = audio_path)
-            audio_segment = load_audio_by_bit(audio_path, 0, length, bitSize = tr, sr = sr)
-            audio_segment_fortagging = load_audio_by_bit(audio_path, 0, length, bitSize = tr, sr = cnn14_sr)
+            audio_segment = load_audio_by_bit(audio_path, 0, length, bitSize = tr, sr = sr) # Load audio chunks for training at sample rate of Soundnet
+            prob,embedding = tagging.inference(np.stack(load_audio_by_bit(audio_path, 0, length, bitSize = tr, sr = cnn14_sr))) ## load audio chunks resampled for CNN14 and perform inference, return probas and embeddings
+            probs.append(prob)
+            embeddings.append(embedding)
             x.append(audio_segment)
-            y.append(audio_segment_fortagging)
-
-        print("Inference with CNN14...")
-        ## Batch inference of probabilities
-        probs,embeddings = [tagging.inference(np.stack(y_bit))[0] for y_bit in y],[tagging.inference(np.stack(y_bit))[1] for y_bit in y]
+                        
         print("done.")
 
         os.makedirs(npdatasetpath,exist_ok=True)
