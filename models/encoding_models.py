@@ -8,42 +8,33 @@ from models import soundnet_model as snd
 #change start_finetuning in function of epoch n°
 
 class SoundNetFineTune(nn.Module):
-    def __init__(self, out_size, output_layer, fmrihidden=1000, kernel_size = 1, 
-                train_start = None, finetune_delay=None, nroi_attention=None, power_transform=False, hrf_model=None, 
-                oversampling = 16, tr = 1.49, audiopad = 0, pytorch_param_path = None, no_init=False):
+    def __init__(self, proba_size, embedding_size, output_layer, kernel_size = 1, 
+                train_start = None, finetune_delay=None, pytorch_param_path = None, no_init=False):
         super(SoundNetFineTune, self).__init__()
 
         self.soundnet = snd.SoundNet8_pytorch()
-        self.fmrihidden = fmrihidden
-        self.out_size = out_size
+        self.proba_size = proba_size
+        self.embedding_size = embedding_size        
         self.train_start = train_start
         self.train_current = None
         self.finetune_delay = finetune_delay
         self.output_layer = output_layer
         self.layers_features = {}
-        self.power_transform = power_transform
 
         if not no_init : 
             if pytorch_param_path is not None:
                 print("Loading SoundNet weights...")
                 # load pretrained weights of original soundnet model
                 self.soundnet.load_state_dict(torch.load(pytorch_param_path))
-
-        self.encoding_fmri = nn.Conv2d(self.soundnet.layers_size[output_layer],self.out_size,
-                                        kernel_size=(kernel_size,1), padding=(kernel_size-1,0))
-        print('shape of encoding matrice from last encoding layer : {} X {}'.format(self.soundnet.layers_size[output_layer], self.out_size))
-        if nroi_attention is not None:
-            self.maskattention = torch.nn.Parameter(torch.rand(out_size,nroi_attention))
-        else:
-            self.maskattention = None
         
-        if hrf_model is not None : 
-            self.hrf_model = hrf_model
-            self.oversampling = oversampling
-            self.audiopad = audiopad
-            self.tr = tr
-        else :
-            self.hrf_model=None
+        self.match_embedding = nn.Sequential(
+            nn.Conv2d(self.soundnet.layers_size[output_layer],self.embedding_size,kernel_size=(kernel_size,1), padding=(kernel_size-1,0)),
+            nn.BatchNorm2d(self.embedding_size),
+            nn.ReLU(inplace=True)
+        )
+
+        self.compute_probas = nn.Conv2d(self.embedding_size,self.proba_size,
+                                        kernel_size=(kernel_size,1), padding=(kernel_size-1,0))
 
     def forward(self, x, epoch):     
         layers = ["conv1", "conv2", "conv3", "conv4", "conv5", "conv6", "conv7"] 
@@ -57,10 +48,11 @@ class SoundNetFineTune(nn.Module):
                 i = len(layers) - epoch//self.finetune_delay
                 self.train_current = layers[i] if i >= idx_train_start else idx_train_start
             emb = self.soundnet(x, self.output_layer, self.train_current)        
-        emb = torch.sqrt(emb) if self.power_transform else emb
-        #print(emb.shape)
-        out = F.relu(torch.mean(self.encoding_fmri(emb),dim=2).squeeze())
-        return out
+
+        emb_out = self.match_embedding(emb)
+        prob_out = self.compute_probas(emb_out)
+        
+        return prob_out,emb_out
     
     def extract_feat(self,x:torch.Tensor)->dict:
         (x, output_list) = self.soundnet.extract_feat(x=x, output=self.output_layer)

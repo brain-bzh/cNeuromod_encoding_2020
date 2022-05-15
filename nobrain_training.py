@@ -7,13 +7,14 @@ from datetime import datetime
 import files_utils as fu
 #Create Dataset
 from torch.utils.data import DataLoader
-from Datasets_utils import SequentialDataset, create_usable_audio_datasets, create_train_eval_dataset
+from Datasets_utils import AudioEmbProbDataset, create_usable_audio_datasets, create_train_eval_dataset
 #Models
 from models import encoding_models as encod
 #Train & Test
 from tqdm import tqdm
 from torch import nn, optim, save, load
-from train_utils import train, test, test_r2, EarlyStopping 
+from train_utils import train, test, test_r2, EarlyStopping
+from torchinfo import summary
 
 soundNet_params_path = '/home/nfarrugi/git/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
 scratch_path = '/home/nfarrugi/data/scratch'
@@ -35,21 +36,17 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
     scale = data_processing['scale']
     tr = data_processing['tr']
     sr = data_processing['sr']
-    selected_inputs =data_processing['selected_inputs']
-    if selected_inputs != None : 
-        nInputs = len(selected_inputs)
-    else:        
-        nInputs = 2048
 
     #training_parameters
     model = training_hyperparameters['model']
-    fmrihidden = training_hyperparameters['fmrihidden']
     kernel_size = training_hyperparameters['kernel_size']
     finetune_start = training_hyperparameters['finetune_start'] 
     finetune_delay = training_hyperparameters['finetune_delay']
     output_layer = training_hyperparameters['output_layer']
     patience_es = training_hyperparameters['patience']
     delta_es = training_hyperparameters['delta']
+    gamma = training_hyperparameters['gamma']
+    lambada = training_hyperparameters['lambada']
     batchsize = training_hyperparameters['batchsize']
     lr = training_hyperparameters['lr']
     weight_decay = training_hyperparameters['weight_decay']
@@ -88,6 +85,17 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
         print('suppression of checkpoint file')
         os.remove(checkpoint_path)#'checkpoint.pt'
 
+
+    #|--------------------------------------------------------------------------------------------------------------------------------------
+    ### Model Setup
+    print(f', kernel size : ', kernel_size, ', output_layer : ', output_layer, 
+        ', finetune_start : ', finetune_start, ', weight_decay', weight_decay)
+    net = encod.SoundNetFineTune(proba_size=527,embedding_size=2048,pytorch_param_path=soundNet_params_path, 
+                                    output_layer=output_layer, kernel_size=kernel_size,train_start= finetune_start,
+                                    finetune_delay=finetune_delay, no_init=no_init)
+
+    summary(net,input_size=(1,1,32855*batchsize, 1),epoch=0)
+
     #------------------select data (dataset, films, sessions/seasons)
 
     #input : list of tuple of shape (audio_path, scan_path)
@@ -100,31 +108,25 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
     print("Creation of Datasets, can be very long....")
 
     print("Validation....")    
-    xVal, yVal,embVal = create_usable_audio_datasets(DataVal, tr, sr, name='validation',npdatasetpath=npdatasetpath)
-    print(len(xVal),len(yVal))
-    ValDataset = SequentialDataset(xVal, embVal, batch_size=batchsize, selection=selected_inputs)
+    xVal, probVal,embVal = create_usable_audio_datasets(DataVal, tr, sr, name='validation',npdatasetpath=npdatasetpath,device="cuda:0")
+    ValDataset = AudioEmbProbDataset(xVal, probVal,embVal, batch_size=batchsize)
     valloader = DataLoader(ValDataset, batch_size=None)
 
     print("Test....")
-    xTest, yTest,embTest = create_usable_audio_datasets(DataTest, tr, sr,npdatasetpath=npdatasetpath,name='test')
-    TestDataset = SequentialDataset(xTest, embTest, batch_size=batchsize, selection=selected_inputs)
+    xTest, probTest,embTest = create_usable_audio_datasets(DataTest, tr, sr,npdatasetpath=npdatasetpath,name='test',device="cuda:0")
+    TestDataset = AudioEmbProbDataset(xTest, probTest, embTest, batch_size=batchsize)
     testloader = DataLoader(TestDataset, batch_size=None)
     print("Training....")
-    xTrain, yTrain,embTrain = create_usable_audio_datasets(DataTrain, tr, sr, npdatasetpath=npdatasetpath,name='training')
-    TrainDataset = SequentialDataset(xTrain, embTrain, batch_size=batchsize, selection=selected_inputs)
+    xTrain, probTrain,embTrain = create_usable_audio_datasets(DataTrain, tr, sr, npdatasetpath=npdatasetpath,name='training',device="cuda:0")
+    TrainDataset = AudioEmbProbDataset(xTrain, probTrain, embTrain, batch_size=batchsize)
     trainloader = DataLoader(TrainDataset, batch_size=None)
 
     
 
     print(f'size of train, val and set : ', len(TrainDataset), len(ValDataset), len(TestDataset))
 
-    #|--------------------------------------------------------------------------------------------------------------------------------------
-    ### Model Setup
-    print(f'nInputs : ', nInputs, ', kernel size : ', kernel_size, ', output_layer : ', output_layer, 
-        ', finetune_start : ', finetune_start, ' power_transform : ', power_transform, ', weight_decay', weight_decay)
-    net = encod.SoundNetFineTune(pytorch_param_path=soundNet_params_path,fmrihidden=fmrihidden,out_size=nInputs, 
-                                    output_layer=output_layer, kernel_size=kernel_size, power_transform=power_transform, 
-                                    train_start= finetune_start, finetune_delay=finetune_delay, no_init=no_init)
+    
+    
     if gpu: 
         net.to("cuda")
     else:
@@ -162,12 +164,12 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
         try:
             for epoch in tqdm(range(nbepoch)):
 
-                t_l, t_r2 = train(trainloader,net,optimizer, epoch, mseloss=mseloss,gpu=gpu)
+                t_l, t_r2 = train(trainloader,net,optimizer, epoch, mseloss=mseloss,gpu=gpu,lambada=lambada, gamma = gamma)
                 train_loss.append(t_l)
                 train_r2_max.append(max(t_r2))
                 train_r2_mean.append(np.mean(t_r2))
 
-                v_l, v_r2 = test(valloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu)
+                v_l, v_r2 = test(valloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu,lambada=lambada, gamma = gamma)
                 val_loss.append(v_l)
                 r2_evolution.append(v_r2)
                 val_r2_max.append(max(v_r2))
@@ -299,6 +301,8 @@ if __name__ == "__main__":
     parser.add_argument("--test100", type=float, default=0.2)
     parser.add_argument("--val100", type=float, default=0.2)
         #other
+    parser.add_argument("--lambada", type=float, default=1e-3) ## weight of MSE Loss
+    parser.add_argument("--gamma", type=float, default=1e-4) ## weight of KLDiv Loss
     parser.add_argument("--gpu", dest='gpu', action='store_true')
     parser.add_argument("--lr", type=float, default=1e-2)
     parser.add_argument("--nbepoch", type=int, default=1000)
@@ -344,6 +348,8 @@ if __name__ == "__main__":
         'kernel_size':args.ks,
         'patience':args.patience,
         'delta':args.delta, 
+        'lambada':args.lambada,
+        'gamma':args.gamma,
         'train_percent':args.train100,
         'test_percent':args.test100,
         'val_percent':args.val100,

@@ -48,13 +48,13 @@ class EarlyStopping:
         self.val_loss_min = val_loss
 
 
-def train(trainloader,net,optimizer, epoch, mseloss,delta=1e-2, gpu=True):
+def train(trainloader,net,optimizer, epoch, mseloss,lambada=1e-2, gamma = 1e-4,gpu=True):
     all_y = []
     all_y_predicted = []
     running_loss = 0
     net.train()
-
-    for batch_nb, (x, y) in enumerate(trainloader):
+    kl_audio = torch.nn.KLDivLoss(reduction='batchmean')
+    for batch_nb, (x, prob, emb) in enumerate(trainloader):
         #print(f'batch n°', batch_nb)
         optimizer.zero_grad()
         batch_size = x.shape[0]
@@ -62,109 +62,84 @@ def train(trainloader,net,optimizer, epoch, mseloss,delta=1e-2, gpu=True):
 
         # for 1D output
         #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)        
-        x =  torch.Tensor(x).view(batch_size,1,-1, 1)          #we need to adapt the shape of the batch so it can fit into pytorch convolutions layers
+        x =  torch.Tensor(x).view(1,1,-1, 1)          #we need to adapt the shape of the batch so it can fit into pytorch convolutions layers
         #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)
         if gpu : 
             x = x.cuda()                                           #then we put the tensor into the memory of the graphic card, so computations can be done faster
+            prob = prob.cuda()
+            emb= emb.cuda()
         # Forward pass
-        predicted_y = net(x, epoch)
+        predicted_prob,predicted_emb = net(x, epoch)
+        
         #print(f"y_real shape : ", y.shape, "and y_predicted shape : ", predicted_y.shape)         # both must have the same shape
-        #predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()# as some dimensions in the output 
+        predicted_emb = predicted_emb.permute(2,1,0,3).squeeze()# as some dimensions in the output 
         #print(f'   len(predicted_y) : ', len(predicted_y))        
         
-        #predicted_y = predicted_y[:batch_size]                #FOR AUDIO ONLY : Cropping the end of the predicted fmri to match the measured bold
+        predicted_emb = predicted_emb[:batch_size]
+
+        predicted_prob = predicted_prob.permute(2,1,0,3).squeeze()
+        predicted_prob = predicted_prob[:batch_size]
         #print(f'predicted_y after squeezing and cutting to the same size as fmri data: ', predicting_y)
         #print(f'   len(predicted_y) after crop: ', len(predicted_y))
-        
+        #print(f"Predicted prob shape {predicted_prob.shape}, Predicted Embedding shape {predicted_emb.shape} ")
+        #print(f"prob shape {prob.shape},  Embedding shape {emb.shape} ")
         #y = y.double()
         #print(f'   len(real_y): ', len(y))
-        if gpu:
-            y = y.cuda()
-        
-        loss=delta*mseloss(predicted_y,y)/batch_size
+
+        loss_audioset = kl_audio(torch.nn.functional.log_softmax(predicted_prob,1),prob)
+                    
+        loss=lambada*mseloss(predicted_emb,emb)/batch_size + gamma*loss_audioset
         loss.backward()
         optimizer.step()
 
-        all_y.append(y.cpu().numpy().reshape(batch_size,-1))
-        all_y_predicted.append(predicted_y.detach().cpu().numpy().reshape(batch_size,-1))
+        all_y.append(emb.cpu().numpy().reshape(batch_size,-1))
+        all_y_predicted.append(predicted_emb.detach().cpu().numpy().reshape(batch_size,-1))
         running_loss += loss.item()
         
     r2_model = r2_score(np.vstack(all_y),np.vstack(all_y_predicted),multioutput='raw_values') 
     return running_loss/batch_nb, r2_model
 
-def train_without_grad(trainloader,net,optimizer,mseloss,delta=1e-2, gpu=True):
-    all_y = []
-    all_y_predicted = []
-    running_loss = 0
-    net.train()
-
-    with torch.no_grad() : 
-        for batch_nb, (x, y) in enumerate(trainloader):
-            print(f'batch n°', batch_nb)
-            optimizer.zero_grad()
-            batch_size = x.shape[0]
-            print(f'   batch size (x.shape[0]) : ', batch_size)
-
-            # for 1D output 
-            x =  torch.Tensor(x).view(1,1,-1, 1) 
-            if gpu:
-                x = x.cuda()  
-            # Forward pass
-            predicted_y = net(x)
-            predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()
-            print(f'   len(predicted_y) : ', len(predicted_y))
-            predicted_y = predicted_y[:batch_size]
-            print(f'   len(predicted_y) after crop: ', len(predicted_y))
-            y = y.double()
-            print(f'   len(real_y): ', len(y))
-            if gpu:
-                y = y.cuda()
-
-            loss=delta*mseloss(predicted_y,y)/batch_size
-
-            all_y.append(y.cpu().numpy().reshape(batch_size,-1))
-            all_y_predicted.append(predicted_y.detach().cpu().numpy().reshape(batch_size,-1))
-            running_loss += loss.item()
-            
-
-        r2_model = r2_score(np.vstack(all_y),np.vstack(all_y_predicted),multioutput='raw_values') 
-        return running_loss/batch_nb, r2_model
-
-
-def test(trainloader,net,optimizer, epoch ,mseloss,delta=1e-2, gpu=True):
+def test(trainloader,net,optimizer, epoch ,mseloss,lambada=1e-2, gamma=1e-4,gpu=True):
     all_y = []
     all_y_predicted = []
     running_loss = 0
     net.eval()
-
+    kl_audio = torch.nn.KLDivLoss(reduction='batchmean')
     with torch.no_grad() : 
-        for batch_nb, (x, y) in enumerate(trainloader):
+        for batch_nb, (x, prob, emb) in enumerate(trainloader):
             optimizer.zero_grad()
             batch_size = x.shape[0]
 
-            x =  torch.Tensor(x).view(batch_size,1,-1, 1)          #we need to adapt the shape of the batch so it can fit into pytorch convolutions layers
+            x =  torch.Tensor(x).view(1,1,-1, 1)          #we need to adapt the shape of the batch so it can fit into pytorch convolutions layers
             #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)
             if gpu : 
                 x = x.cuda()                                           #then we put the tensor into the memory of the graphic card, so computations can be done faster
+                prob = prob.cuda()
+                emb= emb.cuda()
             # Forward pass
-            predicted_y = net(x, epoch)
+            predicted_prob,predicted_emb = net(x, epoch)
+            
             #print(f"y_real shape : ", y.shape, "and y_predicted shape : ", predicted_y.shape)         # both must have the same shape
-            #predicted_y = predicted_y.permute(2,1,0,3).squeeze().double()# as some dimensions in the output 
+            predicted_emb = predicted_emb.permute(2,1,0,3).squeeze()# as some dimensions in the output 
             #print(f'   len(predicted_y) : ', len(predicted_y))        
             
-            #predicted_y = predicted_y[:batch_size]                #FOR AUDIO ONLY : Cropping the end of the predicted fmri to match the measured bold
+            predicted_emb = predicted_emb[:batch_size]
+
+            predicted_prob = predicted_prob.permute(2,1,0,3).squeeze()
+            predicted_prob = predicted_prob[:batch_size]
             #print(f'predicted_y after squeezing and cutting to the same size as fmri data: ', predicting_y)
             #print(f'   len(predicted_y) after crop: ', len(predicted_y))
-            
+            #print(f"Predicted prob shape {predicted_prob.shape}, Predicted Embedding shape {predicted_emb.shape} ")
+            #print(f"prob shape {prob.shape},  Embedding shape {emb.shape} ")
             #y = y.double()
             #print(f'   len(real_y): ', len(y))
-            if gpu:
-                y = y.cuda()
-        
-            loss=delta*mseloss(predicted_y,y)/batch_size
 
-            all_y.append(y.cpu().numpy().reshape(batch_size,-1))
-            all_y_predicted.append(predicted_y.detach().cpu().numpy().reshape(batch_size,-1))
+            loss_audioset = kl_audio(torch.nn.functional.log_softmax(predicted_prob,1),prob)
+                        
+            loss=lambada*mseloss(predicted_emb,emb)/batch_size + gamma*loss_audioset
+
+            all_y.append(emb.cpu().numpy().reshape(batch_size,-1))
+            all_y_predicted.append(predicted_emb.detach().cpu().numpy().reshape(batch_size,-1))
             running_loss += loss.item()
             
 

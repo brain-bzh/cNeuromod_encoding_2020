@@ -94,6 +94,43 @@ class SequentialDataset(IterableDataset):
     def __iter__(self):
         return iter(self.batches)
 
+class AudioEmbProbDataset(IterableDataset):
+    def __init__(self, x, y, z,batch_size):
+        super(AudioEmbProbDataset).__init__()
+
+        self.x = x
+        self.y = y
+        self.z = z
+        self.batch_size = batch_size
+
+        self.batches = []
+        for seg_x, seg_y, seg_z in zip(self.x,self.y,self.z):
+            seg = self.__create_batchs__(seg_x, seg_y,seg_z)
+            self.batches.extend(seg)
+
+        self.batches = sample(self.batches, len(self.batches))
+    
+    
+
+    def __create_batchs__(self, dataset_x, dataset_y,dataset_z):
+        batches = []
+        total_nb_inputs = len(dataset_x)
+        for batch_start in range(0, total_nb_inputs, self.batch_size):
+            if batch_start+self.batch_size>total_nb_inputs:
+                batch_end = total_nb_inputs
+            else:
+                batch_end = batch_start+self.batch_size
+
+            batches.append((torch.Tensor(dataset_x[batch_start:batch_end]), torch.Tensor(dataset_y[batch_start:batch_end]),torch.Tensor(dataset_z[batch_start:batch_end])))
+        batches = sample(batches, len(batches))
+        return batches
+
+    def __len__(self):
+        return(len(self.batches)) 
+
+    def __iter__(self):
+        return iter(self.batches)
+
 def create_usable_audiofmri_datasets(data, tr, sr, name='data'):
     print("getting audio files for {}...".format(name))
     x = []
