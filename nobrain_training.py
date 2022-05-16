@@ -366,10 +366,9 @@ if __name__ == "__main__":
     device = torch.device(args.device)
     #-------------------------------------------------------------
     ml_analysis = ''
-    if args.wandb :
-        os.environ['WANDB_MODE'] = 'offline' #for beluga environment
+    if args.wandb :        
         import wandb 
-        wandb.init(project="neuroencoding_audiobaseline", config={}, dir='/home/nfarrugi/wandb')#group=, job_type=, name=, 
+        wandb.init(project="neuroencoding_audiobaseline", config={}, dir='/homes/nfarrugi/wandb',entity="brain-imt")#group=, job_type=, name=, 
         wandb.config.update(args)
         ml_analysis += 'wandb'
 
