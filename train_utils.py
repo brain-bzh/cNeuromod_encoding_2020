@@ -48,7 +48,7 @@ class EarlyStopping:
         self.val_loss_min = val_loss
 
 
-def train(trainloader,net,optimizer, epoch, mseloss,lambada=1e-2, gamma = 1e-4,gpu=True):
+def train(trainloader,net,optimizer, epoch, mseloss,lambada=1e-2, gamma = 1e-4,gpu=True,device="cpu"):
     all_y = []
     all_y_predicted = []
     running_loss = 0
@@ -64,10 +64,10 @@ def train(trainloader,net,optimizer, epoch, mseloss,lambada=1e-2, gamma = 1e-4,g
         #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)        
         x =  torch.Tensor(x).view(1,1,-1, 1)          #we need to adapt the shape of the batch so it can fit into pytorch convolutions layers
         #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)
-        if gpu : 
-            x = x.cuda()                                           #then we put the tensor into the memory of the graphic card, so computations can be done faster
-            prob = prob.cuda()
-            emb= emb.cuda()
+        x = x.to(device)
+        prob = prob.to(device)
+        emb = emb.to(device)
+        
         # Forward pass
         predicted_prob,predicted_emb = net(x, epoch)
         
@@ -99,7 +99,7 @@ def train(trainloader,net,optimizer, epoch, mseloss,lambada=1e-2, gamma = 1e-4,g
     r2_model = r2_score(np.vstack(all_y),np.vstack(all_y_predicted),multioutput='raw_values') 
     return running_loss/batch_nb, r2_model
 
-def test(trainloader,net,optimizer, epoch ,mseloss,lambada=1e-2, gamma=1e-4,gpu=True):
+def test(trainloader,net,optimizer, epoch ,mseloss,lambada=1e-2, gamma=1e-4,gpu=True,device="cpu"):
     all_y = []
     all_y_predicted = []
     running_loss = 0
@@ -112,10 +112,10 @@ def test(trainloader,net,optimizer, epoch ,mseloss,lambada=1e-2, gamma=1e-4,gpu=
 
             x =  torch.Tensor(x).view(1,1,-1, 1)          #we need to adapt the shape of the batch so it can fit into pytorch convolutions layers
             #print(f'x before becoming into a tensor and reshaping : ', type(x2), x2.shape)
-            if gpu : 
-                x = x.cuda()                                           #then we put the tensor into the memory of the graphic card, so computations can be done faster
-                prob = prob.cuda()
-                emb= emb.cuda()
+            
+            x = x.to(device)
+            prob = prob.to(device)
+            emb= emb.to(device)
             # Forward pass
             predicted_prob,predicted_emb = net(x, epoch)
             
@@ -145,32 +145,3 @@ def test(trainloader,net,optimizer, epoch ,mseloss,lambada=1e-2, gamma=1e-4,gpu=
 
         r2_model = r2_score(np.vstack(all_y),np.vstack(all_y_predicted),multioutput='raw_values') 
         return running_loss/batch_nb, r2_model
-
-
-def test_r2(testloader,net, epoch, mseloss, gpu=True):
-    all_fmri = []
-    all_fmri_p = []
-    net.eval()
-    with torch.no_grad():
-        for (wav,fmri) in testloader:
-
-            bsize = wav.shape[0]
-            
-            # load data
-            
-            wav = torch.Tensor(wav).view(bsize,1,-1,1)
-            if gpu:
-                wav = wav.cuda()
-
-            fmri = fmri.view(bsize,-1)
-            if gpu:
-                fmri=fmri.cuda()
-
-            # Forward pass
-            fmri_p = net(wav, epoch)            
-            
-            all_fmri.append(fmri.cpu().numpy().reshape(bsize,-1))
-            all_fmri_p.append(fmri_p.cpu().numpy().reshape(bsize,-1))
-
-    r2_model = r2_score(np.vstack(all_fmri),np.vstack(all_fmri_p),multioutput='raw_values')
-    return r2_model
