@@ -1,5 +1,6 @@
 #Generic
 import os, argparse
+import torch
 from tkinter import Y
 import numpy as np
 from datetime import datetime
@@ -13,13 +14,13 @@ from models import encoding_models as encod
 #Train & Test
 from tqdm import tqdm
 from torch import nn, optim, save, load
-from train_utils import train, test, test_r2, EarlyStopping
+from train_utils import train, test, EarlyStopping
 from torchinfo import summary
 
-soundNet_params_path = '/home/nfarrugi/git/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
-scratch_path = '/home/nfarrugi/data/scratch'
+soundNet_params_path = '/homes/nfarrugi/work/git/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
+scratch_path = '/users/local/nicolas/scratch/scratch'
 
-def model_training_nobrain(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis):
+def model_training_nobrain(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis,device="cpu"):
 
     #data selection
     all_subs_files = data_selection['all_data']
@@ -92,10 +93,9 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
         ', finetune_start : ', finetune_start, ', weight_decay', weight_decay)
     net = encod.SoundNetFineTune(proba_size=527,embedding_size=2048,pytorch_param_path=soundNet_params_path, 
                                     output_layer=output_layer, kernel_size=kernel_size,train_start= finetune_start,
-                                    finetune_delay=finetune_delay, no_init=no_init)
-
-    summary(net,input_size=(1,1,32855*batchsize, 1),epoch=0)
-
+                                    finetune_delay=finetune_delay, no_init=no_init).to(device)
+    summary(net,input_size=(1,1,32855*batchsize, 1),epoch=0,device=device)
+    print(device)
     #------------------select data (dataset, films, sessions/seasons)
 
     #input : list of tuple of shape (audio_path, scan_path)
@@ -108,17 +108,17 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
     print("Creation of Datasets, can be very long....")
 
     print("Training....")
-    xTrain, probTrain,embTrain = create_usable_audio_datasets(DataTrain, tr, sr, npdatasetpath=npdatasetpath,name='training',device="cuda:0")
+    xTrain, probTrain,embTrain = create_usable_audio_datasets(DataTrain, tr, sr, npdatasetpath=npdatasetpath,name='training',device=device)
     TrainDataset = AudioEmbProbDataset(xTrain, probTrain, embTrain, batch_size=batchsize)
     trainloader = DataLoader(TrainDataset, batch_size=None)
 
     print("Validation....")    
-    xVal, probVal,embVal = create_usable_audio_datasets(DataVal, tr, sr, name='validation',npdatasetpath=npdatasetpath,device="cuda:0")
+    xVal, probVal,embVal = create_usable_audio_datasets(DataVal, tr, sr, name='validation',npdatasetpath=npdatasetpath,device=device)
     ValDataset = AudioEmbProbDataset(xVal, probVal,embVal, batch_size=batchsize)
     valloader = DataLoader(ValDataset, batch_size=None)
 
     print("Test....")
-    xTest, probTest,embTest = create_usable_audio_datasets(DataTest, tr, sr,npdatasetpath=npdatasetpath,name='test',device="cuda:0")
+    xTest, probTest,embTest = create_usable_audio_datasets(DataTest, tr, sr,npdatasetpath=npdatasetpath,name='test',device=device)
     TestDataset = AudioEmbProbDataset(xTest, probTest, embTest, batch_size=batchsize)
     testloader = DataLoader(TestDataset, batch_size=None)
     
@@ -129,11 +129,7 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
 
     
     
-    if gpu: 
-        net.to("cuda")
-    else:
-        net.to("cpu")
-
+    
     if decoupled_weightDecay : 
         optimizer = optim.AdamW(net.parameters(), lr = lr, weight_decay=weight_decay)
     elif not decoupled_weightDecay : 
@@ -166,12 +162,12 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
         try:
             for epoch in tqdm(range(nbepoch)):
 
-                t_l, t_r2 = train(trainloader,net,optimizer, epoch, mseloss=mseloss,gpu=gpu,lambada=lambada, gamma = gamma)
+                t_l, t_r2 = train(trainloader,net,optimizer, epoch, mseloss=mseloss,gpu=gpu,lambada=lambada, gamma = gamma,device=device)
                 train_loss.append(t_l)
                 train_r2_max.append(max(t_r2))
                 train_r2_mean.append(np.mean(t_r2))
 
-                v_l, v_r2 = test(valloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu,lambada=lambada, gamma = gamma)
+                v_l, v_r2 = test(valloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu,lambada=lambada, gamma = gamma,device=device)
                 val_loss.append(v_l)
                 r2_evolution.append(v_r2)
                 val_r2_max.append(max(v_r2))
@@ -215,11 +211,11 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
         net.load_state_dict(load(checkpoint_path))
 
     enddate = datetime.now()
-    test_loss, final_model = test(testloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu)
+    test_loss, r2model = test(testloader,net,optimizer, epoch, mseloss=mseloss, gpu=gpu,device=device)
     print("Test Loss : {}".format(test_loss))
     
     if ml_analysis == 'wandb':
-        wandb.log({"test loss": test_loss, "test r2 max": max(final_model), "test r2 mean":np.mean(final_model)})
+        wandb.log({"test loss": test_loss, "test r2 max": max(r2model), "test r2 mean":np.mean(r2model)})
     elif ml_analysis == 'comet':
         pass
     else : 
@@ -231,15 +227,12 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
     outfile_name += dt_string
     str_bestmodel = os.path.join(destdir,"{}.pt".format(outfile_name))
 
-    r2model = test_r2(testloader,net, epoch, mseloss, gpu=gpu)
-
     print("mean R2 score on test set  : {}".format(r2model.mean()))
     print("max R2 score on test set  : {}".format(r2model.max()))
     print("Training time : {}".format(enddate - startdate))
 
     ## Prepare data structure for checkpoint
-    state = {
-                'model' : net,
+    state = {                
                 'net': net.state_dict(),
                 'epoch': epoch,
                 'train_loss' : train_loss,
@@ -306,6 +299,8 @@ if __name__ == "__main__":
     parser.add_argument("--lambada", type=float, default=1e-3) ## weight of MSE Loss
     parser.add_argument("--gamma", type=float, default=1e-4) ## weight of KLDiv Loss
     parser.add_argument("--gpu", dest='gpu', action='store_true')
+    parser.add_argument("--device", type=str, default="cpu")
+
     parser.add_argument("--lr", type=float, default=1e-2)
     parser.add_argument("--nbepoch", type=int, default=1000)
     parser.add_argument("--wd", type=float, default=1e-2)
@@ -368,12 +363,13 @@ if __name__ == "__main__":
     }
     th = training_hyperparameters
 
+    device = torch.device(args.device)
     #-------------------------------------------------------------
     ml_analysis = ''
     if args.wandb :
         os.environ['WANDB_MODE'] = 'offline' #for beluga environment
         import wandb 
-        wandb.init(project="neuroencoding_audio", config={}, dir='/home/maellef/scratch/wandb')#group=, job_type=, name=, 
+        wandb.init(project="neuroencoding_audiobaseline", config={}, dir='/home/nfarrugi/wandb')#group=, job_type=, name=, 
         wandb.config.update(args)
         ml_analysis += 'wandb'
 
@@ -383,7 +379,7 @@ if __name__ == "__main__":
         ml_analysis += 'comet'
 
     outpath = os.path.join(scratch_path,'Results/') #"/home/maelle/Results/"
-    stimuli_path = '/home/nfarrugi/data/neuromod_stimuli/stimuli' #'/home/maelle/DataBase/stimuli'
+    stimuli_path = '/users/local/nicolas/scratch/stimuli' #'/home/maelle/DataBase/stimuli'
 
     ## Even if we will not load the fmri data, we need the path to be able to use the same loading functions than in the brain training 
     embed_path = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_Embeddings_fmriprep-20.2lts' #'/home/maelle/DataBase/fMRI_Embeddings'
@@ -403,10 +399,9 @@ if __name__ == "__main__":
     
     ds['all_data']=all_subs_files
     print("Entering main training function")
-    model_training_nobrain(resultpath, ds, dp, th, ml_analysis)
+    model_training_nobrain(resultpath, ds, dp, th, ml_analysis,device=device)
 
     if args.wandb :
         wandb.finish()
     elif args.comet : 
         pass
-
