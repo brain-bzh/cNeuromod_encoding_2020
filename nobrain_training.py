@@ -107,6 +107,11 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
     npdatasetpath = os.path.join(scratch_path,'np_datasets')
     print("Creation of Datasets, can be very long....")
 
+    print("Training....")
+    xTrain, probTrain,embTrain = create_usable_audio_datasets(DataTrain, tr, sr, npdatasetpath=npdatasetpath,name='training',device="cuda:0")
+    TrainDataset = AudioEmbProbDataset(xTrain, probTrain, embTrain, batch_size=batchsize)
+    trainloader = DataLoader(TrainDataset, batch_size=None)
+
     print("Validation....")    
     xVal, probVal,embVal = create_usable_audio_datasets(DataVal, tr, sr, name='validation',npdatasetpath=npdatasetpath,device="cuda:0")
     ValDataset = AudioEmbProbDataset(xVal, probVal,embVal, batch_size=batchsize)
@@ -116,10 +121,7 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
     xTest, probTest,embTest = create_usable_audio_datasets(DataTest, tr, sr,npdatasetpath=npdatasetpath,name='test',device="cuda:0")
     TestDataset = AudioEmbProbDataset(xTest, probTest, embTest, batch_size=batchsize)
     testloader = DataLoader(TestDataset, batch_size=None)
-    print("Training....")
-    xTrain, probTrain,embTrain = create_usable_audio_datasets(DataTrain, tr, sr, npdatasetpath=npdatasetpath,name='training',device="cuda:0")
-    TrainDataset = AudioEmbProbDataset(xTrain, probTrain, embTrain, batch_size=batchsize)
-    trainloader = DataLoader(TrainDataset, batch_size=None)
+    
 
     
 
