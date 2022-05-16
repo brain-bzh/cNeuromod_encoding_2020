@@ -5,8 +5,7 @@ import statistics
 import pickle
 from torch import load, device
 from nilearn import datasets, surface, plotting, regions, image, input_data
-from matplotlib import pyplot as plt 
-#from files_utils import create_dir_if_needed, print_dict, extract_value_from_string
+from matplotlib import pyplot as plt
 
 mistroifile = "/home/maelle/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz"
 mask='STG_middle.nii.gz'
