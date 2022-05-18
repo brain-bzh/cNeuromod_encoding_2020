@@ -48,7 +48,7 @@ class EarlyStopping:
         self.val_loss_min = val_loss
 
 
-def train(trainloader,net,optimizer, epoch, mseloss,lambada=1e-2, gamma = 1e-4,gpu=True,device="cpu"):
+def train(trainloader,net,optimizer, epoch, mseloss,temperature,lambada=1e-2, gamma = 1e-4,gpu=True,device="cpu"):
     all_y = []
     all_y_predicted = []
     running_loss = 0
@@ -86,7 +86,7 @@ def train(trainloader,net,optimizer, epoch, mseloss,lambada=1e-2, gamma = 1e-4,g
         #y = y.double()
         #print(f'   len(real_y): ', len(y))
 
-        loss_audioset = kl_audio(torch.nn.functional.log_softmax(predicted_prob,1),prob)
+        loss_audioset = kl_audio(torch.nn.functional.log_softmax(predicted_prob/temperature,1),prob)
                     
         loss=lambada*mseloss(predicted_emb,emb)/batch_size + gamma*loss_audioset
         loss.backward()

@@ -48,6 +48,7 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
     delta_es = training_hyperparameters['delta']
     gamma = training_hyperparameters['gamma']
     lambada = training_hyperparameters['lambada']
+    temperature = training_hyperparameters['temperature']
     batchsize = training_hyperparameters['batchsize']
     lr = training_hyperparameters['lr']
     weight_decay = training_hyperparameters['weight_decay']
@@ -162,7 +163,7 @@ def model_training_nobrain(outpath, data_selection, data_processing, training_hy
         try:
             for epoch in tqdm(range(nbepoch)):
 
-                t_l, t_r2 = train(trainloader,net,optimizer, epoch, mseloss=mseloss,gpu=gpu,lambada=lambada, gamma = gamma,device=device)
+                t_l, t_r2 = train(trainloader,net,optimizer, epoch, mseloss=mseloss,gpu=gpu,lambada=lambada,temperature=temperature, gamma = gamma,device=device)
                 train_loss.append(t_l)
                 train_r2_max.append(max(t_r2))
                 train_r2_mean.append(np.mean(t_r2))
@@ -297,6 +298,7 @@ if __name__ == "__main__":
     parser.add_argument("--val100", type=float, default=0.2)
         #other
     parser.add_argument("--lambada", type=float, default=1e-3) ## weight of MSE Loss
+    parser.add_argument("--temperature", type=float, default=1.5) ## Softmax temperature for KLDiv Loss
     parser.add_argument("--gamma", type=float, default=1e-4) ## weight of KLDiv Loss
     parser.add_argument("--gpu", dest='gpu', action='store_true')
     parser.add_argument("--device", type=str, default="cpu")
@@ -346,6 +348,7 @@ if __name__ == "__main__":
         'patience':args.patience,
         'delta':args.delta, 
         'lambada':args.lambada,
+        'temperature':args.temperature,
         'gamma':args.gamma,
         'train_percent':args.train100,
         'test_percent':args.test100,
