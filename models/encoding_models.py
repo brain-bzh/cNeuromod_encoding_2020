@@ -66,6 +66,65 @@ class SoundNetFineTune(nn.Module):
  
         return (x, output_list)
  
+class SoundNetFineTuneAutoEncode(nn.Module):
+    def __init__(self, proba_size, embedding_size, output_layer, kernel_size = 1, 
+                train_start = None, finetune_delay=None, pytorch_param_path = None, no_init=False):
+        super(SoundNetFineTuneAutoEncode, self).__init__()
+
+        self.soundnet = snd.SoundNet8_pytorch()
+        self.proba_size = proba_size
+        self.embedding_size = embedding_size        
+        self.train_start = train_start
+        self.train_current = None
+        self.finetune_delay = finetune_delay
+        self.output_layer = output_layer
+        self.layers_features = {}
+
+        if not no_init : 
+            if pytorch_param_path is not None:
+                print("Loading SoundNet weights...")
+                # load pretrained weights of original soundnet model
+                self.soundnet.load_state_dict(torch.load(pytorch_param_path))
+        
+        self.match_embedding = nn.Sequential(
+            nn.Conv2d(self.soundnet.layers_size[output_layer],self.embedding_size,kernel_size=(kernel_size,1), padding=(kernel_size-1,0)),
+            nn.BatchNorm2d(self.embedding_size),
+            nn.ReLU(inplace=True)
+        )
+
+        self.compute_probas = nn.Conv2d(self.embedding_size,self.proba_size,
+                                        kernel_size=(kernel_size,1), padding=(kernel_size-1,0))
+
+    def forward(self, x, epoch):     
+        layers = ["conv1", "conv2", "conv3", "conv4", "conv5", "conv6", "conv7"] 
+        idx_train_start = layers.index(self.train_start) if self.train_start is not None else 0
+
+        if self.finetune_delay is None or self.finetune_delay == 0: 
+            emb = self.soundnet(x, self.output_layer, self.train_start)
+        else : 
+            modulo = epoch%self.finetune_delay
+            if modulo == 0:
+                i = len(layers) - epoch//self.finetune_delay
+                self.train_current = layers[i] if i >= idx_train_start else idx_train_start
+            emb = self.soundnet(x, self.output_layer, self.train_current)        
+
+        emb_out = self.match_embedding(emb)
+        prob_out = self.compute_probas(emb_out)
+        
+        return prob_out,emb_out
+    
+    def extract_feat(self,x:torch.Tensor)->dict:
+        (x, output_list) = self.soundnet.extract_feat(x=x, output=self.output_layer)
+
+        if self.power_transform:
+            x = torch.sqrt(x)
+            output_list['power_transform'] = x.detach().cpu().numpy()
+
+        x = self.encoding_fmri(x)
+        output_list['encoding_layer'] = x.detach().cpu().numpy()
+ 
+        return (x, output_list)
+
 class SoundNetEncoding_conv(nn.Module):
     def __init__(self, out_size, output_layer, fmrihidden=1000, kernel_size = 1, 
                 train_start = None, finetune_delay=None, nroi_attention=None, power_transform=False, hrf_model=None, 
