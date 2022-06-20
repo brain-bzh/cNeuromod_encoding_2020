@@ -378,7 +378,7 @@ if __name__ == "__main__":
 
     outpath = '/home/maellef/scratch/Results/' #"/home/maelle/Results/"
     stimuli_path = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/stimuli' #'/home/maelle/DataBase/stimuli'
-    embed_path = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_Embeddings_fmriprep-20.2lts' #'/home/maelle/DataBase/fMRI_Embeddings'
+    embed_path = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_Embeddings_fmriprep-2022' #'/home/maelle/DataBase/fMRI_Embeddings'
     
     dataset_path = os.path.join(stimuli_path, ds['dataset'])
     parcellation_path = os.path.join(embed_path, dp['scale'], ds['dataset'], 'sub-'+args.sub)
@@ -389,7 +389,7 @@ if __name__ == "__main__":
         if os.path.isdir(film_path):
             all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
 
-    resultpath = os.path.join(outpath, dt_string+"_HPtraining_sub2")
+    resultpath = os.path.join(outpath, dt_string+"_finetuning_sub1")
     resultpath = os.path.join(resultpath, 'sub-'+args.sub)
     os.makedirs(resultpath, exist_ok=True)
     
