@@ -8,6 +8,8 @@ import torch
 
 def create_train_eval_dataset(train_input, eval_input, train_percent, val_percent, test_percent):
 
+    print(train_input)
+    print(eval_input)
     same_train_eval_datasets = True
     for (train_x, train_y), (eval_x, eval_y) in zip(train_input, eval_input):
        if train_x != eval_x or train_y != eval_y:
@@ -30,7 +32,7 @@ def create_train_eval_dataset(train_input, eval_input, train_percent, val_percen
         #to verify if it works ...
         if val_len > len(eval_input):
             test_len = len(eval_input)
-        elif train_percent+val_percent+test_percent == 1:
+        elif train_percent+val_percent+test_percent == 1 and val_percent != 0:
             test_len = val_len 
         else: 
             test_len = int(np.floor(test_percent*len(eval_input)))    

@@ -36,5 +36,5 @@ if __name__ == "__main__":
     # path_name = './HP_training_FineFriends_sub_3_jobs_0'
     # division_size = 120
 
-    select_previous_commands_by_job_state('HP_training_Friends_02_subs_jobs.sh', 5095318, 'TIMEOUT')
+    select_previous_commands_by_job_state('HP_training_FineFriends_01_subs_jobs.sh', 5710703, 'TIMEOUT')
 

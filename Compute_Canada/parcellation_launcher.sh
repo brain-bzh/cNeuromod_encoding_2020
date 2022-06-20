@@ -1,8 +1,9 @@
 #!/bin/bash
 #SBATCH --output=/home/maellef/scratch/202206_parcellation_%x-%j.out
 #SBATCH --account=def-pbellec
-#SBATCH --time=15:00:00
-#SBATCH --mem=12G
+#SBATCH --time=4:00:00
+#SBATCH --cpus-per-task=3
+#SBATCH --mem=20G
 #SBATCH --array=1-2
 
 module load python/3.8 scipy-stack
