@@ -18,11 +18,13 @@ from nilearn.connectome import ConnectivityMeasure
 # basepath = '/~/nfarrugi/git/neuromod/cneuromod/movie10/derivatives/fmriprep1.5.0/fmriprep'
 space = 'MNI152NL'
 desc = 'preproc_bold.nii.gz'
+#to change-------
 cNeuromod_path = '/home/maellef/projects/rrg-pbellec/rrg-pbellec/datasets/cneuromod_processed/fmriprep'
+#-----------------
 mistroicsv = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_parcellations/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
-mistroi_labelsimg = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
-auditory_mask = '/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/parcellation/STG_middle.nii.gz'
-embedding_path = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_Embeddings_fmriprep-2022/'
+mistroi_labelsimg = '/home/maellef/projects/def-pbellec/maellef/data/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
+auditory_mask = '/home/maellef/projects/def-pbellec/maellef/cNeuromod_encoding_2020/parcellation/STG_middle.nii.gz'
+embedding_path = '/home/maellef/projects/def-pbellec/maellef/data/fMRI_Embeddings_fmriprep-2022/'
 os.makedirs(embedding_path,exist_ok=True)
 
 def parcellate_auditory(filepath_fmri, auditorymask, subject, dataset, save=True,savepath='./results'):
@@ -97,7 +99,7 @@ if __name__ == "__main__":
     if dataset == 'movie10' : 
         mri_path = os.path.join(cNeuromod_path, dataset)
     elif dataset == 'friends' : 
-        mri_path = '/lustre03/project/rrg-pbellec/maellef/finefriends/data/friends.fmriprepcd/'
+        mri_path = '/lustre03/project/rrg-pbellec/maellef/Finefriends/data/friends.fmriprepcd/'
     subjectdir = os.path.join(mri_path, subject)
 
     for s in os.listdir(subjectdir):
