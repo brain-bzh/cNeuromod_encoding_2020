@@ -27,9 +27,9 @@ def convert_model(model_file_path, savepath,device=None):
     torch.save(newdict,savepath)
     return newmodel
 
-path_best_models = '/home/maelle/Results/converted_models'
+path_best_models = '/home/maelle/Results/best_models'
 
-for sub in os.listdir(path_best_models) : 
+for sub in ['sub-01'] : 
     sub_path = os.path.join(path_best_models, sub)
     for model in os.listdir(sub_path) : 
         model_path = os.path.join(sub_path, model)
