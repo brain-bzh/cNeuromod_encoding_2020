@@ -6,16 +6,16 @@ from torch import load, device
 from wandb_utils import load_df_from_wandb
 from visu_utils import ROI_map, voxels_map
 
-data_path = '/media/maelle/Backup Plus/thèse/Results/'
+data_path = '/home/maelle/Results/20220524_finetuning_sub1' #/media/maelle/Backup Plus/thèse/Results/'
 result_path = '/home/maelle/Results'
 outpath = '.' #'/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/'
 
 # project = "gaimee/neuroencoding_audio"
-# df_save = os.path.join(outpath, 'subs_2346_comp')
+# df_save = os.path.join(outpath, 'subs_12346_comp')
 # runs_df = load_df_from_wandb(project)
 # runs_df.to_csv(df_save, sep=';')
 # print(runs_df.shape)
-runs_df = pd.read_csv('./subs_2346_comp', sep=';')
+runs_df = pd.read_csv('./subs_12346_comp', sep=';')
 
 
 # #best_roi
@@ -30,7 +30,7 @@ runs_df = pd.read_csv('./subs_2346_comp', sep=';')
 # delta_bool = df['delta'] == delta
 # patience_bool = df['patience'] == patience
 
-for sub, (lr, ks, bs) in zip([2, 3, 4, 6], [(1e-05, 7, 80), (1e-04, 5, 70), (1e-05, 6, 80),(1e-05, 6, 70)]):
+for sub, (lr, ks, bs) in zip([1], [(1e-05, 7, 80)]):#[1, 2, 3, 4, 6], [(1e-05, 7, 80), (1e-05, 7, 80), (1e-04, 5, 70), (1e-05, 6, 80),(1e-05, 6, 70)]):
     sub_df = runs_df[runs_df['sub']==sub]
     bs_bool = sub_df['bs'] == bs
     lr_bool = sub_df['lr'] == lr
@@ -46,7 +46,7 @@ for sub, (lr, ks, bs) in zip([2, 3, 4, 6], [(1e-05, 7, 80), (1e-04, 5, 70), (1e-
     vox_df = sub_df[(sub_df['scale']=='auditory_Voxels') & bs_bool & lr_bool & ks_bool]
 
     print(runs_df.shape, sub_df.shape, roi_df.shape, vox_df.shape)
-    for i, df in enumerate([roi_df, vox_df]):
+    for i, df in enumerate([roi_df]): #, vox_df]):
         layer_r2 = {'none':[], 'conv7':[], 'conv6':[], 'conv5':[], 'conv4':[]}
         for path, dirs, files in os.walk(data_path):
             for f in files:
@@ -62,7 +62,7 @@ for sub, (lr, ks, bs) in zip([2, 3, 4, 6], [(1e-05, 7, 80), (1e-04, 5, 70), (1e-
                             layer_r2['none'].append(data['test_r2'])
                         else : 
                             layer_r2[layer_serie.item()].append(data['test_r2'])                
-        print(sub, layer_r2)
+        #print(sub, layer_r2)
         for layer, data in layer_r2.items():
             arr= np.array(data).reshape(len(data), -1)
             moy_arr = np.mean(arr, axis=0)

@@ -1,0 +1,151 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "from matplotlib import pyplot\n",
+    "from nilearn import datasets, plotting\n",
+    "from torch import load, device"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0         R_SPlob\n",
+      "1         L_SPlob\n",
+      "2       R_CAUDN_v\n",
+      "3       L_CAUDN_v\n",
+      "4         L_CERVM\n",
+      "          ...    \n",
+      "205     R_STgyr_p\n",
+      "206     L_VLPFcor\n",
+      "207    R_CERCR2_p\n",
+      "208    L_PSMcor_a\n",
+      "209    R_PSMcor_a\n",
+      "Name: label, Length: 210, dtype: object\n"
+     ]
+    }
+   ],
+   "source": [
+    "mist_roi_labels = '../parcellation/MIST_ROI.csv'\n",
+    "roi_dataframe = pd.read_csv(mist_roi_labels, sep=';')\n",
+    "print(roi_dataframe['label'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "atlas_yeo_2011 = datasets.fetch_atlas_yeo_2011()\n",
+    "atlas_yeo = atlas_yeo_2011.colors_7"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "results_path = '/home/maelle/Results/best_models'\n",
+    "conv4_path = os.path.join(results_path, 'sub-02_friends_MIST_ROI_SoundNetEncoding_conv_0800715_0e+00_1e-05_1e-03_opt110_f_conv4_wbidpcmtk3zb_20220428-093227.npy')\n",
+    "conv5_path = os.path.join(results_path, 'sub-02_friends_MIST_ROI_SoundNetEncoding_conv_0800715_0e+00_1e-05_1e-03_opt110_f_conv5_wbido6zr4tpq_20220428-200536.npy')\n",
+    "conv6_path = os.path.join(results_path, 'sub-02_friends_MIST_ROI_SoundNetEncoding_conv_0800715_0e+00_1e-05_1e-03_opt110_f_conv6_wbid1ah0k16g_20220429-002514.npy')\n",
+    "conv7_path = os.path.join(results_path, 'sub-02_friends_MIST_ROI_SoundNetEncoding_conv_0800715_0e+00_1e-05_1e-03_opt110_f_conv7_wbidx3ap6wmq_20220428-230520.npy')\n",
+    "no_ft_path = os.path.join(results_path, 'sub-02_friends_MIST_ROI_SoundNetEncoding_conv_0800715_0e+00_1e-05_1e-03_opt110_wbid28gqq8u1_20220429-044704.npy')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "AttributeError",
+     "evalue": "'Series' object has no attribute 'iter'",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mAttributeError\u001b[0m                            Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-14-b9bed6bf2d40>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[0mdata\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mload\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mconv4_path\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      2\u001b[0m \u001b[0mruns_df\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mpd\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mDataFrame\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mdata\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mcolumns\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mroi_dataframe\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m'label'\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 3\u001b[0;31m \u001b[0;32mfor\u001b[0m \u001b[0mlabel\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mroi_dataframe\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m'label'\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0miter\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      4\u001b[0m     \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mlabel\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      5\u001b[0m     \u001b[0;31m#print(runs_df['R_SPlob'])\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/anaconda3/lib/python3.6/site-packages/pandas/core/generic.py\u001b[0m in \u001b[0;36m__getattr__\u001b[0;34m(self, name)\u001b[0m\n\u001b[1;32m   5137\u001b[0m             \u001b[0;32mif\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_info_axis\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_can_hold_identifiers_and_holds_name\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mname\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   5138\u001b[0m                 \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mname\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 5139\u001b[0;31m             \u001b[0;32mreturn\u001b[0m \u001b[0mobject\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m__getattribute__\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mname\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   5140\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   5141\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0m__setattr__\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mname\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mstr\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mvalue\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m->\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mAttributeError\u001b[0m: 'Series' object has no attribute 'iter'"
+     ]
+    }
+   ],
+   "source": [
+    "data = np.load(conv4_path)\n",
+    "runs_df = pd.DataFrame(data, columns=roi_dataframe['label'])\n",
+    "for i, label in roi_dataframe['label'].iteritems():\n",
+    "    print(label)\n",
+    "    #print(runs_df['R_SPlob'])\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.axes._subplots.AxesSubplot at 0x7f605653e278>"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "runs_df['R_SPlob'].plot(kind='box')"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.9"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

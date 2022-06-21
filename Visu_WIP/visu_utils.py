@@ -34,7 +34,7 @@ def ROI_map(data, title, out_directory, threshold, display_mode='z'):
     #data = load(data, map_location=device('cpu'))
     #r2_img = regions.signals_to_img_labels(data[criteria].reshape(1,-1),mistroifile)
     r2_img = regions.signals_to_img_labels(data.reshape(1,-1),mistroifile)
-    #r2_img.to_filename(os.path.join(out_directory, title))
+    r2_img.to_filename(os.path.join(out_directory, title))
     #data_map = image.load_img(os.path.join(out_directory, '{}.nii'.format(title)))
     #r2_img = data_map
     f = plt.figure()

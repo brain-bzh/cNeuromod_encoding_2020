@@ -7,7 +7,7 @@ from visu_utils import brain_3D_map
 font = {'size'   : 22}
 
 results_path = '/home/maelle/Results/figures_finefriends/nii'
-subs = ['sub01', 'sub02', 'sub03', 'sub04', 'sub05', 'sub06']
+subs = ['sub01']#, 'sub02', 'sub03', 'sub04', 'sub05', 'sub06']
 out_directory = '/home/maelle/Results/figures_finefriends'
 relative = True
 
