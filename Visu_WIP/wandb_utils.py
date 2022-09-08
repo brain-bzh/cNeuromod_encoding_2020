@@ -43,17 +43,17 @@ def order_results_files_from_wandb(results_path, wandb_path, subject, scale, pro
 
 if __name__ == "__main__":
     #Project is specified by <entity/project-name>
-    # project = "gaimee/neuroencoding_audio"
-    # outpath = '.' #'/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/'
-    # df_save = os.path.join(outpath, 'allruns_MAI')
-    # runs_df = load_df_from_wandb(project)
-    # runs_df.to_csv(df_save, sep=';')
-    runs_df = pd.read_csv('./allruns_MAI', sep=';')
+    #project = "gaimee/neuroencoding_audio"
+    #outpath = '.' #'/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/'
+    #df_save = os.path.join(outpath, 'wandb_runs_all_subs')
+    #runs_df = load_df_from_wandb(project)
+    #runs_df.to_csv(df_save, sep=';')
+    runs_df = pd.read_csv('./wandb_runs_all_subs', sep=';')
 
-    subs = [1] #2, 4, 6]
+    subs = [5] #2, 4, 6]
     scales = ['MIST_ROI', 'auditory_Voxels']
     lrs = [1e-4, 1e-5, 1e-6]
-    kss = [6,7,8]
+    kss = [5,6,7]
     bss = [60,70,80]
     configs = []
     for lr in lrs:
