@@ -29,9 +29,11 @@ def convert_model(model_file_path, savepath,device=None):
 
 path_best_models = '/home/maelle/Results/best_models'
 
-for sub in ['sub-01'] : 
+for sub in ['sub-01', 'sub-02', 'sub-03', 'sub-04', 'sub-05', 'sub-06'] : 
     sub_path = os.path.join(path_best_models, sub)
     for model in os.listdir(sub_path) : 
-        model_path = os.path.join(sub_path, model)
-        checkpoint_path = os.path.join(path_best_models, '{}_{}'.format(sub, model))
-        convert_model(model_path, checkpoint_path)
+        for conv in ['conv1', 'conv2', 'conv3'] : 
+            if conv in model : 
+                model_path = os.path.join(sub_path, model)
+                checkpoint_path = os.path.join(path_best_models, '{}_{}'.format(sub, model))
+                convert_model(model_path, checkpoint_path)
