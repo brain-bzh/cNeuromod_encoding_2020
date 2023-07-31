@@ -313,7 +313,7 @@ if __name__ == "__main__":
 
     #ML_analysis
     parser.add_argument("--wandb", dest='wandb', action='store_true')
-    parser.add_argument("--comet", dest='comet', action='store_true')
+    # WIP : parser.add_argument("--comet", dest='comet', action='store_true')
 
     args = parser.parse_args()
 
