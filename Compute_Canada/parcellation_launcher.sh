@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --output=/home/maellef/scratch/202206_parcellation_%x-%j.out
-#SBATCH --account=def-pbellec
+#SBATCH --account=rrg-pbellec
 #SBATCH --time=4:00:00
 #SBATCH --cpus-per-task=3
 #SBATCH --mem=20G

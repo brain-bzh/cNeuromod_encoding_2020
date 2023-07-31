@@ -12,25 +12,25 @@
 #--lr (learning rate) 1 --nbepoch 200 --wd (weight decay) 1e-2
 #--gpu --decoupledWD --powerTransform --lrScheduler --wandb --comet (True/False options)
 
-exp_name = 'HP_training_FineFriends_01_finetuning_MISTROI'
+exp_name = 'Finetune_FineFriends_01_conv1-3'
 base_cmd = 'python ../model_training.py '
 fixed_options = '--lrScheduler --decoupledWD --wandb --gpu\n'
 
 repetition = 5
 subjects = ['01']
-scales = ['auditory_Voxels'] #, 'MIST_ROI']
+scales = ['MIST_ROI']#, 'auditory_Voxels']
 select_data = dict()
 select_data["dataset"] = ['friends']
 select_data["trainData"] = ['s01 s02 s03']
 select_data["evalData"] = ['s04']
 
 bss = [80]
-kss = [6]
+kss = [7]
 lrs = ["1e-5"]
 wds = ["1e-3"]
 es_patiences = ['15']
 es_deltas = [0]
-finetuneStarts = [None, 'conv7', 'conv6', 'conv5', 'conv4']
+finetuneStarts = ['conv3', 'conv2', 'conv1']
 
 #python  model_training.py -s 01 -d movie10 --trainData wolf --evalData bourne --scale MIST_ROI
 cmds = []

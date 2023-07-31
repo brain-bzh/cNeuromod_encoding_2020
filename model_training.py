@@ -23,7 +23,7 @@ from train_utils import train, test, test_r2, EarlyStopping
 #     'val_r2_mean':5
 # }
 
-soundNet_params_path = '/home/maellef/projects/def-pbellec/maellef/projects/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
+soundNet_params_path = '/home/maellef/projects/def-pbellec/maellef/cNeuromod_encoding_2020/sound8.pth' #'./sound8.pth'
 scratch_path = '/home/maellef/scratch'
 
 def model_training(outpath, data_selection, data_processing, training_hyperparameters, ml_analysis):
@@ -377,8 +377,8 @@ if __name__ == "__main__":
         ml_analysis += 'comet'
 
     outpath = '/home/maellef/scratch/Results/' #"/home/maelle/Results/"
-    stimuli_path = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/stimuli' #'/home/maelle/DataBase/stimuli'
-    embed_path = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_Embeddings_fmriprep-2022' #'/home/maelle/DataBase/fMRI_Embeddings'
+    stimuli_path = '/home/maellef/projects/def-pbellec/maellef/data/stimuli' #'/home/maelle/DataBase/stimuli'
+    embed_path = '/home/maellef/projects/def-pbellec/maellef/data/fMRI_Embeddings_fmriprep-2022' #'/home/maelle/DataBase/fMRI_Embeddings'
     
     dataset_path = os.path.join(stimuli_path, ds['dataset'])
     parcellation_path = os.path.join(embed_path, dp['scale'], ds['dataset'], 'sub-'+args.sub)
@@ -389,7 +389,7 @@ if __name__ == "__main__":
         if os.path.isdir(film_path):
             all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
 
-    resultpath = os.path.join(outpath, dt_string+"_finetuning_sub1")
+    resultpath = os.path.join(outpath, dt_string+"_HP_training_sub05")
     resultpath = os.path.join(resultpath, 'sub-'+args.sub)
     os.makedirs(resultpath, exist_ok=True)
     
