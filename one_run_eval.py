@@ -8,10 +8,11 @@ from train_utils import test_r2
 from Datasets_utils import SequentialDataset, create_usable_audiofmri_datasets, create_train_eval_dataset
 from models import encoding_models as encod
 
-models_path = '/home/maellef/projects/def-pbellec/maellef/best_models/best_models' 
-dataset_path = '/home/maellef/projects/def-pbellec/maellef/data/fMRI_Embeddings_fmriprep-2022/'
-stimuli_path = '/home/maellef/projects/def-pbellec/maellef/data/stimuli/friends/s04/'
-save_path = os.path.join(models_path, 'one_run_eval')
+models_path = '/home/maellef/Results/best_models/converted' #'/home/maellef/projects/def-pbellec/maellef/best_models/best_models' 
+dataset_path = '/home/maellef/DataBase/fMRI_Embeddings' #'/home/maellef/projects/def-pbellec/maellef/data/fMRI_Embeddings_fmriprep-2022/'
+stimuli_path = '/home/maellef/DataBase/stimuli/movie10/bourne' #'/home/maellef/projects/def-pbellec/maellef/data/stimuli/friends/s04/'
+outpath = '/home/maellef/Results'
+save_path = os.path.join(outpath, 'one_run_eval')
 os.makedirs(save_path, exist_ok=True) 
 #subjects = ['sub-01', 'sub-02', 'sub-03', 'sub-04', 'sub-05', 'sub-06']
 #sub_model = 'sub-01'
@@ -20,10 +21,10 @@ os.makedirs(save_path, exist_ok=True)
 
 def load_sub_models(sub, scale, conv, models_path=models_path, no_init=False): 
     models = {}
-    scale_path = os.path.join(models_path, scale)
-    for model in os.listdir(scale_path):
-        if '.pt' in model and sub in model and conv in model:
-            model_path = os.path.join(scale_path, model)
+    #scale_path = os.path.join(models_path, sub, scale)
+    for model in os.listdir(models_path):
+        if '.pt' in model and conv in model and sub in model and scale in model:
+            model_path = os.path.join(models_path, model)
             modeldict = torch.load(model_path, map_location=torch.device('cpu'))
             model_net = encod.SoundNetEncoding_conv(out_size=modeldict['out_size'],output_layer=modeldict['output_layer'],
                                                     kernel_size=modeldict['kernel_size'], no_init=no_init)
@@ -78,7 +79,6 @@ if __name__ == "__main__":
     one_run_eval(sub_data, dataset, models, pairs_wav_fmri, no_init=no_init)
 
 #python one_run_eval.py -d friends -s auditory_Voxels -c conv1 --sub_model sub-01 --sub_data sub-01
-
 #create a dataset for eval made of one run
 
 
