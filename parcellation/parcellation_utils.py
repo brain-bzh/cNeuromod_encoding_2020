@@ -20,7 +20,7 @@ space = 'MNI152NL'
 desc = 'preproc_bold.nii.gz'
 #to change-------
 cNeuromod_path = '/home/maellef/projects/rrg-pbellec/rrg-pbellec/datasets/cneuromod_processed/fmriprep'
-#-----------------
+#----------------
 mistroicsv = '/home/maellef/projects/def-pbellec/maellef/data/DataBase/fMRI_parcellations/MIST_parcellation/Parcel_Information/MIST_ROI.csv'
 mistroi_labelsimg = '/home/maellef/projects/def-pbellec/maellef/data/fMRI_parcellations/MIST_parcellation/Parcellations/MIST_ROI.nii.gz'
 auditory_mask = '/home/maellef/projects/def-pbellec/maellef/cNeuromod_encoding_2020/parcellation/STG_middle.nii.gz'
