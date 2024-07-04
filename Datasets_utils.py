@@ -1,10 +1,12 @@
 
-from random import sample
+from random import sample, shuffle
 import numpy as np
 from audio_utils import load_audio_by_bit
 import librosa
 from torch.utils.data import IterableDataset
 import torch
+
+rng = np.random.default_rng(42)
 
 def create_train_eval_dataset(train_input, eval_input, train_percent, val_percent, test_percent):
 
@@ -15,6 +17,7 @@ def create_train_eval_dataset(train_input, eval_input, train_percent, val_percen
             break
 
     if same_train_eval_datasets : 
+        rng.shuffle(train_input)
         train_len = int(np.floor(train_percent*len(train_input))) 
         test_len = int(np.floor(test_percent*len(train_input)))
         val_len = len(train_input)- train_len - test_len if train_percent+val_percent+test_percent >= 1 else int(np.floor(val_percent*len(train_input)))
@@ -25,6 +28,8 @@ def create_train_eval_dataset(train_input, eval_input, train_percent, val_percen
         DataTest = train_input[train_len+val_len:train_len+val_len+test_len]
     
     else :
+        rng.shuffle(train_input)
+        rng.shuffle(eval_input)
         train_len = int(np.floor(train_percent*len(train_input)/(train_percent+val_percent)))
         val_len = len(train_input)-train_len if train_percent+val_percent+test_percent >= 1 else int(np.floor(val_percent*len(train_input)))
         #to verify if it works ...

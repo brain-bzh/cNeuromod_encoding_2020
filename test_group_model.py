@@ -17,7 +17,7 @@ from train_utils import train, test, test_r2, EarlyStopping
 parser = argparse.ArgumentParser()
 
 #data_selection
-parser.add_argument("-s", "--sub", type=str)
+parser.add_argument("-s", "--sub", type=str, nargs='+')
 parser.add_argument("-d", "--dataset", type=str)
 parser.add_argument("--sessionsTrain", type=int, default=1) # WIP, must be >=1, add a condition to check the entry
 parser.add_argument("--sessionsEval", type=int, default=1) # WIP, must be >=1, add a condition to check the entry
@@ -33,7 +33,7 @@ parser.add_argument("--sr", type=int, default=22050)
 args = parser.parse_args()
 
 data_selection = {
-    'subject' : int(args.sub),
+    'subject' : args.sub,
     'dataset' : args.dataset,
     'train_data' : args.trainData,
     'eval_data' : args.evalData,
@@ -50,22 +50,30 @@ data_processing = {
 }
 dp = data_processing
 
-outpath = '/home/maellef/scratch/Results/' #"/home/maelle/Results/"
-stimuli_path = '/home/maellef/projects/def-pbellec/maellef/data/stimuli' #'/home/maelle/DataBase/stimuli'
-embed_path = '/home/maellef/projects/def-pbellec/maellef/data/fMRI_Embeddings_fmriprep-2022' #'/home/maelle/DataBase/fMRI_Embeddings'
+outpath = "/home/maellef/Results/finefriends_groupmodel" #'/home/maellef/scratch/Results/'
+stimuli_path = '/home/maellef/DataBase' #'/home/maellef/projects/def-pbellec/maellef/data/stimuli'
+embed_path = '/home/maellef/DataBase/fMRI_Embeddings' #'/home/maellef/projects/def-pbellec/maellef/data/fMRI_Embeddings_fmriprep-2022'
 
-dataset_path = os.path.join(stimuli_path, ds['dataset'])
-parcellation_path = os.path.join(embed_path, dp['scale'], ds['dataset'], 'sub-'+args.sub)
+dataset_path = os.path.join(stimuli_path, ds['dataset'], 'stimuli')
+parcellation_path = os.path.join(embed_path, dp['scale'], ds['dataset'])
+                                 
+                                 #'sub-'+args.sub)
 
 all_subs_files = dict()
-for film in os.listdir(dataset_path):
-    film_path = os.path.join(dataset_path, film)
-    if os.path.isdir(film_path):
-        all_subs_files[film] = fu.associate_stimuli_with_Parcellation(film_path, parcellation_path)
+for sub in ds['subject']:
+    print(sub)
+    for film in os.listdir(dataset_path):
+        if film not in all_subs_files.keys():
+            all_subs_files[film] = []
+        film_path = os.path.join(dataset_path, film)
+        if os.path.isdir(film_path):
+            sub_parcellation_path = os.path.join(parcellation_path, 'sub-'+sub)
+            all_subs_files[film].extend(fu.associate_stimuli_with_Parcellation(film_path, sub_parcellation_path))
 
 resultpath = os.path.join(outpath, dt_string+"test")
 resultpath = os.path.join(resultpath, 'sub-'+args.sub)
 
 ds['all_data']=all_subs_files
 
-print(all_subs_files)
+python model_training.py -s 02 03 04 05 06 -d friends --trainData s1 s2 s3 --evalData s4 --scale auditory_Voxels -f conv4 --bs 75 --ks 7 --lr 1e-5 --wd 1e-3 --patience 15 --delta 0 --lrScheduler --decoupledWD
+python model_training.py -s 02 03 04 05 06 -d friends --trainData s1 s2 s3 --evalData s4 --scale MIST_ROI -f conv4 --bs 75 --ks 7 --lr 1e-5 --wd 1e-3 --patience 15 --delta 0 --lrScheduler --decoupledWD 
