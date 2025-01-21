@@ -1,8 +1,13 @@
 import os
+from pandas import isnull
+from audio_utils import convert_Audio
 
-def create_dir_if_needed(path):
-    if not os.path.isdir(path):
-        os.makedirs(path)
+all_films = {
+    'bourne':'bourne_supremacy',
+    'wolf':'wolf_of_wall_street',
+    'life':'life',
+    'figures':'hidden_figures',
+}
 
 def print_dict(dico):
     for key, value in dico.items():
@@ -28,42 +33,48 @@ def extract_value_from_string(string, start_index, stop_condition=(lambda x: Fal
 
     return target_value
 
+def result_name(dataset, scale, model, batchsize, kernel_size, patience_es, delta_es, learning_rate, weigth_decay, 
+                            decoupled_wd, lr_scheduler, power_transform, finetune_start, wandb_id, no_training, no_init, 
+                            year = 2022):
+    
+    outfile_name = '{}_{}_{}_'.format(dataset, scale, model)
+    outfile_name +='{:03}{:02}{:02}'.format(batchsize, kernel_size, patience_es)
+    if year == 2021 :
+        outfile_name +='{:.0e}'.format(delta_es)[-3:]+'{:.0e}'.format(learning_rate)[-3:]+'{:.0e}'.format(weigth_decay)[-3:]
+    else : 
+        outfile_name +='_{:.0e}'.format(delta_es)+'_{:.0e}'.format(learning_rate)+'_{:.0e}'.format(weigth_decay)
+    outfile_name += '_opt'
+    outfile_name = outfile_name+'1' if decoupled_wd else outfile_name+'0'
+    outfile_name = outfile_name+'1' if lr_scheduler else outfile_name+'0'
+    outfile_name = outfile_name+'1' if power_transform else outfile_name+'0'
+    outfile_name = outfile_name+'_NoTrain' if no_training else outfile_name
+    outfile_name = outfile_name+'_NoInit' if no_init else outfile_name
+    if finetune_start != None or not isnull(finetune_start) : 
+        outfile_name = outfile_name+'_f_'+finetune_start
+    outfile_name += '_wbid'+format(wandb_id)
+    return outfile_name
+
 def fetchMRI(videofile,fmrilist):
     ### isolate the mkv file (->filename) and the rest of the path (->videopath)
+    filmPath,filename = os.path.split(videofile)
+    datasetPath, film = os.path.split(filmPath)
+    _, dataset = os.path.split(datasetPath)
+    task, _  = os.path.splitext(filename[len(dataset)+1:])
 
-    videopath,filename = os.path.split(videofile)
-    #formatting the name to correspond to mri run formatting
-    name = filename.replace('_', '')
-    if name.startswith('the'):
-        name = name.replace('the', '', 1)
-    if name.find('life') > -1 :
-        name = name.replace('life1', 'life')
-
-    name = name.replace('seg','_run-')
-    name = name.replace('subsampl','')
-    ## Rename to match the parcellated filenames
-    name = name.replace('.wav','npz.npz')
-
-    # list of all parcellated filenames 
-
-    # match videofilename with parcellated files
     mriMatchs = []
     for curfile in fmrilist:
         _, cur_name = os.path.split(curfile)
-        if cur_name[23:] == (name):
+        #print(task, cur_name)
+        if cur_name.find(task) >-1 :
             mriMatchs.append(curfile)    
-    #in case of multiple run for 1 film segment
-    name_seg = filename[:-4]
 
     if len(mriMatchs) > 1 :
         numSessions = []
         for run in mriMatchs :
-            index_sess = run.find('ses-vid')
-            numSessions.append(int(run[index_sess+7:index_sess+10]))
-            
-        if numSessions[0] < numSessions[1] : 
+            index_ses = run.find('ses-')
+            numSessions.append(int(run[index_ses+4:index_ses+7]))
+        if numSessions[0] < numSessions[1] :
             return [(videofile, mriMatchs[0], mriMatchs[1])]#), (videofile, mriMatchs[1])]
-
         else : 
             return [(videofile, mriMatchs[1], mriMatchs[0])]#), (videofile, mriMatchs[0])]
     elif len(mriMatchs) == 0 : 
@@ -73,53 +84,80 @@ def fetchMRI(videofile,fmrilist):
         return [(videofile, mriMatchs[0])]
 
 def associate_stimuli_with_Parcellation(stimuli_path, path_parcellation):
-    stimuli_dic = {}
-    for film in os.listdir(stimuli_path):
-        film_path = os.path.join(stimuli_path, film)
-        if os.path.isdir(film_path):
-            film_wav = [os.path.join(film_path, seg) for seg in os.listdir(film_path) if seg[-4:] == '.wav']
-            stimuli_dic[film] = sorted(film_wav)
-
-    all_subs = []
-    for sub_dir in sorted(os.listdir(path_parcellation)):
-        sub_path = os.path.join(path_parcellation, sub_dir)
-        all_subs.append([os.path.join(sub_path, mri_data) for mri_data in os.listdir(sub_path) if mri_data[-4:]==".npz"])
-
-    for i, sub in enumerate(all_subs) : 
-        sub_segments = {}
-        for film, segments in stimuli_dic.items() : 
-            sub_segments[film] = []
-            for j in range(len(segments)):
-                sub_segments[film].extend(fetchMRI(segments[j], sub))
-
-            all_subs[i] = sub_segments
-    return all_subs
+    stimuli_wav = [os.path.join(stimuli_path, seg) for seg in sorted(os.listdir(stimuli_path)) if seg[-4:] == '.wav']
+    parcellation_list = [os.path.join(path_parcellation, mri_data) for mri_data in sorted(os.listdir(path_parcellation)) if mri_data[-4:]==".npz"]
+    pair_wav_mri = []
+    for wav in stimuli_wav:
+        pair_wav_mri.extend(fetchMRI(wav, parcellation_list))
+    return pair_wav_mri
 
 def cNeuromod_subject_convention(path, name, zero_index = True):
     num = int(name[-1])
     if zero_index : 
         num +=1
 
-    new_name = 'sub'+str(num)
-    if new_name != name:
-        prev_path = os.path.join(path, name)
-        new_path = os.path.join(path, new_name)
-        os.rename(prev_path, new_path)
+    return 'sub'+str(num)
 
-def rename_object(path, keyword_to_replace, rename_convention, objects=['dirs','files']):
-    for path, dirs, files in os.walk(path):
+def cNeuromod_stimuli_convention(path, name):
+    #name_model : sub-0X_ses-XXX_task-<sXXe/film><xxx>.wav
+    #path_model : your_path/DataBase/stimuli/dataset/<films, seasons>
+
+    name, ext = os.path.splitext(name)
+    film = os.path.basename(path)
+    dataset = os.path.basename(os.path.dirname(path))
+
+    run = name[-4:] if dataset == 'friends' else name[-2:]
+
+    new_name = dataset+'_'+film+run+ext
+    return new_name
+
+def cNeuromod_embeddings_convention(path, name):
+    #name_model : sub-0X_ses-XXX_task-<sXXe/film><xxx>.npz
+    #path_model : your_path/DataBase/fMRI_Embeddings/your_embedding/dataset/subject
+
+    _, ext = os.path.splitext(name)
+    subject = os.path.basename(path)
+
+    sessIndex = name.find('ses-')+4
+    vidIndex = name.find('vid')+3
+    if sessIndex > 3 or vidIndex > 2 :
+        i = max(sessIndex, vidIndex)
+        session = 'ses-'+name[i:i+3]
+    else : 
+        print('error : no sufficient information to name the file')
+        return None
+    
+    dataset = os.path.basename(os.path.dirname(path))
+    if dataset == 'movie10':
+        for film in all_films.keys():
+            if name.find(film)>-1:
+                break
+        taskNumI = name.find('run-')+4
+        task = 'task-'+film+name[taskNumI:taskNumI+2]
+
+        new_name = subject+'_'+session+'_'+task+ext
+
+    elif dataset == 'friends':
+        new_name = name
+    
+    return new_name
+
+def rename_objects_in_dataset(dataset_path, keyword_to_replace, rename_convention, objects=['dirs','files']):
+    for path, dirs, files in os.walk(dataset_path):
         for key_object in objects :
             if key_object == 'dirs':
                 key_list = dirs
             elif key_object == 'files':
                 key_list = files
             
-            for obj in key_list:
-                #print(obj)
-                if keyword_to_replace in obj:
-                    rename_convention(path, obj)
+            for filename in key_list:
+                if keyword_to_replace in filename:
+                    new_name = rename_convention(path, filename)
+                    prev_path = os.path.join(path, filename)
+                    new_path = os.path.join(path, new_name)
+                    os.rename(prev_path, new_path)
+
 
 if __name__ == "__main__":
-    path = "/home/maelle/Results/20210201_tests_kernel_voxel_Norm_embed2020"
-    rename_object(path, 'subject_', cNeuromod_subject_convention, objects=['dirs'])
-
+    path_vox = "/home/maelle/DataBase/stimuli/friends"
+    rename_objects_in_dataset(path_vox, 'friends_s', cNeuromod_stimuli_convention, objects=['files'])
